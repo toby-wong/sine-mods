@@ -1,0 +1,20 @@
+[
+  {"type": "text", "label": "Tree Tabs Prototype", "size": "20px", "margin": "12px 0"},
+  {
+    "property": "uc.tree-tabs.enabled",
+    "label": "Enable tree tabs",
+    "type": "checkbox",
+    "defaultValue": true
+  },
+  {
+    "property": "uc.tree-tabs.auto-nest",
+    "label": "Nest new link tabs under the tab they came from",
+    "type": "checkbox",
+    "defaultValue": true
+  },
+  {
+    "type": "text",
+    "label": "Use the arrow beside a parent tab to collapse its children. Right-click a tab → Tree tabs to nest existing tabs or move them out one level. Groups, pins, Essentials, splits and Glance previews are outside this prototype.",
+    "size": "13px"
+  }
+]
