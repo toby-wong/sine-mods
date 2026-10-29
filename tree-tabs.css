@@ -2,8 +2,7 @@
   margin-inline-start: calc(var(--uc-tree-depth, 0) * var(--uc-tree-indent, 14px));
 }
 
-.tabbrowser-tab[uc-tree-hidden],
-tab-group[split-view-group][uc-tree-hidden] {
+.tabbrowser-tab[uc-tree-hidden] {
   display: none !important;
 }
 
@@ -13,7 +12,7 @@ tab-group[split-view-group][uc-tree-hidden] {
   flex: 0 0 20px;
 }
 
-.uc-tree-twisty {
+.tabbrowser-tab .uc-tree-twisty {
   appearance: none;
   flex: 0 0 18px;
   width: 18px;
@@ -30,26 +29,13 @@ tab-group[split-view-group][uc-tree-hidden] {
   -moz-window-dragging: no-drag;
 }
 
-.uc-tree-twisty:hover {
+.tabbrowser-tab .uc-tree-twisty:hover {
   background: color-mix(in srgb, currentColor 12%, transparent);
 }
 
-.uc-tree-twisty:focus-visible {
+.tabbrowser-tab .uc-tree-twisty:focus-visible {
   outline: 2px solid var(--zen-primary-color, AccentColor);
   outline-offset: 1px;
-}
-
-/* Reserve one tree control for the entire split, outside its pane container. */
-:root[zen-sidebar-expanded="true"] tab-group[split-view-group][uc-tree-node] {
-  margin-inline-start: calc(var(--uc-tree-depth, 0) * var(--uc-tree-indent, 14px)) !important;
-  padding-inline-start: 20px;
-}
-
-tab-group[split-view-group] > .uc-tree-split-twisty {
-  position: absolute;
-  inset-inline-start: 0;
-  inset-block-start: 8px;
-  z-index: 1;
 }
 
 :root:not([zen-sidebar-expanded="true"]) .tabbrowser-tab[uc-tree-node] > .tab-stack {
