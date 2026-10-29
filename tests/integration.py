@@ -23,6 +23,10 @@ a,button,input{display:block;margin:18px 0}input{padding:8px}</style>
 <a id="plain" href="/target?plain">Normal link for modified clicks</a>
 <a id="scriptlink" href="/target?scriptlink" onclick="event.preventDefault();window.open(this.href,'_blank')">Scripted link</a>
 <a id="spalink" href="/target?spalink" onclick="event.preventDefault();history.pushState({},'',this.href)">Router link</a>
+<div contenteditable="true">
+  <a id="editable" href="/target?editable" onclick="event.preventDefault();window.open(this.href,'_blank')">Link in an editable document</a>
+  <a id="editableblank" href="/target?editableblank" target="_blank" rel="noopener noreferrer">Editable new-tab link</a>
+</div>
 <button id="script" onclick="window.open('/target?script','_blank')">Script-created tab</button>
 <form action="/post-target" method="post" target="_blank">
 <input name="value" value="preserve-post-body"><button id="post">Submit into new tab</button></form>
@@ -118,10 +122,16 @@ def run(args):
         wait("gBrowser.selectedBrowser.currentURI.spec === " + json.dumps(base + suffix))
         wait("!gZenGlanceManager._animating && !gZenGlanceManager.animatingOpen")
         details = m.js("""
+          const overlay=gZenGlanceManager.overlay, wrapper=gZenGlanceManager.browserWrapper;
+          const outer=gBrowser.tabpanels.getBoundingClientRect(), inner=wrapper.getBoundingClientRect();
+          const parent=document.querySelector('[glance-id]:not([zen-glance-tab])');
           return {url:gBrowser.selectedBrowser.currentURI.spec,
             container:gBrowser.selectedTab.userContextId,
             private:PrivateBrowsingUtils.isWindowPrivate(window),
-            parentContext:document.querySelector('[glance-id]:not([zen-glance-tab])')?.linkedBrowser?.browsingContext.id};
+            parentContext:parent?.linkedBrowser?.browsingContext.id,
+            centerError:Math.abs(inner.x+inner.width/2-outer.x-outer.width/2),
+            widthRatio:inner.width/outer.width,
+            backgroundFilter:getComputedStyle(parent.linkedBrowser.closest(".browserSidebarContainer")).filter};
         """)
         content()
         wait("document.readyState === 'complete'")
@@ -130,13 +140,20 @@ def run(args):
         details["loads"] = REQUESTS["/target"] + REQUESTS["/post-target"] - before
         check(name, details, details["container"] == source["container"] and
               details["parentContext"] == source["context"] and details["loads"] == 1 and
-              "auto-glance-login=source" in details["cookie"])
+              "auto-glance-login=source" in details["cookie"] and details["centerError"] < 2 and
+              .78 < details["widthRatio"] < .82 and details["backgroundFilter"] == "blur(6px)")
+        if name in ("target_blank", "glance_from_split"):
+            image = m.command("WebDriver:TakeScreenshot", {"full": False, "scroll": False})
+            args.report.with_name(name + ".png").write_bytes(base64.b64decode(image))
         m.async_js("await gZenGlanceManager.closeGlance({hasFocused:true,skipPermitUnload:true});return true;")
         wait("!gBrowser.selectedTab.hasAttribute('zen-glance-tab')")
         content()
         preserved = m.js("return document.getElementById('draft')?.value==='Keep this draft';")
         chrome()
         assert preserved, "The parent draft was lost"
+        assert m.js("""
+          return getComputedStyle(gBrowser.selectedBrowser.closest(".browserSidebarContainer")).filter;
+        """) == "none", "Closing Glance left the parent blurred"
         return details
 
     def background_check(name, identifier, suffix):
@@ -222,12 +239,15 @@ def run(args):
         background_check("cmd_noopener_background", "noopener", "/target?noopener")
         background_check("cmd_script_link_background", "scriptlink", "/target?scriptlink")
         background_check("cmd_router_link_background", "spalink", "/target?spalink")
+        background_check("cmd_editable_link_background", "editable", "/target?editable")
+        background_check("cmd_editable_target_blank_background", "editableblank", "/target?editableblank")
         m.js("gBrowser.pinTab(gBrowser.selectedTab);return true;")
         background_check("cmd_pinned_source_background", "blank", "/target?blank")
         m.js("gBrowser.unpinTab(gBrowser.selectedTab);return true;")
         click("blank")
         wait("gBrowser.selectedTab.hasAttribute('zen-glance-tab') && !gZenGlanceManager._animating")
         background_check("cmd_from_glance_background", "plain", "/target?plain")
+        background_check("cmd_editable_from_glance_background", "editable", "/target?editable")
         m.async_js("await gZenGlanceManager.closeGlance({hasFocused:true,skipPermitUnload:true});return true;")
         m.js("Services.prefs.setBoolPref('browser.tabs.loadInBackground',arguments[0]);return true;", [old_background])
         glance_check("middle_click", lambda: click("plain", button=1), "/target?plain")
@@ -268,6 +288,16 @@ def run(args):
         wait("gBrowser.selectedTab.hasAttribute('split-view')")
         split = m.js("return {split:gBrowser.selectedTab.hasAttribute('split-view'),glance:gBrowser.selectedTab.hasAttribute('zen-glance-tab')};")
         check("option_click_split_preserved", split, split["split"] and not split["glance"])
+        m.js("""
+          gBrowser.selectedTab=[...gZenWorkspaces.allStoredTabs].find(
+            t=>t.linkedBrowser?.browsingContext?.id===arguments[0]);
+          gBrowser.selectedBrowser.fullZoom=0.8;
+          return true;
+        """, [source["context"]])
+        background_check("cmd_from_split_background", "plain", "/target?plain")
+        background_check("cmd_editable_from_split_background", "editable", "/target?editable")
+        glance_check("glance_from_split", lambda: click("blank"), "/target?blank")
+        m.js("gBrowser.selectedBrowser.fullZoom=1;return true;")
 
         # Disable and unload affect future openings, not existing tabs.
         m.js("""
@@ -283,6 +313,7 @@ def run(args):
           const ids=[...gZenWorkspaces.allStoredTabs].map(t=>t.id);
           AutoGlance.destroy();
           return {removed:!window.AutoGlance,
+            stylesRemoved:!document.querySelector('link[href*="/auto-glance/auto-glance.css"]'),
             tabsPreserved:JSON.stringify(ids)===JSON.stringify([...gZenWorkspaces.allStoredTabs].map(t=>t.id))};
         """)
         check("unload_preserves_tabs", restored, all(restored.values()))

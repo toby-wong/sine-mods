@@ -18,6 +18,13 @@ uses `target="_blank"` or a website script would normally open it in Glance.
 The page you are reading remains selected. This also works from a Glance
 preview and for links in frames.
 
+This includes real links inside editable documents. The explicit Command
+gesture uses the normal browser link loader even when the document's editor
+would otherwise open its own preview.
+
+Glance previews are centered in the content area with a blurred backdrop.
+Closing, expanding, and splitting previews retain Zen's native behavior.
+
 Open **Zen Settings → Sine → Auto Glance → Configure** to disable the behavior or
 configure the middle-click/context-menu behavior and Command-click override.
 
@@ -52,6 +59,9 @@ included browser tests should be rerun after significant Zen updates.
 context-menu links; script-created tabs; form POSTs; opener and container
 preservation; expanding a preview; the existing Option-click split; disabling
 the mod; and unloading it without losing tabs.
+
+Regression checks include editable document links, links from an existing
+preview and split view, centering, backdrop blur, and 80% page zoom.
 
 `tests/contexts.py` checks private and Little Zen windows. Tests require a
 separate disposable profile whose name includes `test-profile`.

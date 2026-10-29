@@ -1,0 +1,14 @@
+/* Filter the actual background surfaces, including remote browser content.
+   An inactive, retained Glance must not blur another selected tab. */
+.browserSidebarContainer[uc-auto-glance-background] {
+  filter: blur(6px) !important;
+}
+
+/* Anchor the settled preview to its overlay rather than a flex static position.
+   Leave width to Zen so expanding a preview can still grow it to a full tab. */
+.browserSidebarContainer.zen-glance-overlay
+  > .browserContainer[has-finished-animation="true"] {
+  position: absolute !important;
+  inset: 0 !important;
+  margin: auto !important;
+}

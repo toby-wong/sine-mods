@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name           Auto Glance
-// @version        0.2.0
+// @version        0.2.1
 // @description    Open link-created tabs as native Zen Glance previews.
 // @include        chrome://browser/content/browser.xhtml
 // ==/UserScript==
@@ -9,6 +9,7 @@
   "use strict";
 
   window.AutoGlance?.destroy();
+  const VERSION = "0.2.1";
   const PREFIX = "uc.auto-glance.";
   const cleanups = [];
   let destroyed = false;
@@ -60,17 +61,22 @@
         delete prototype[key];
       }
     });
+    if (state.actorRegistered && state.actorVersion !== VERSION) {
+      ChromeUtils.unregisterWindowActor("AutoGlanceClick");
+      state.actorRegistered = false;
+    }
     if (!state.actorRegistered) {
       ChromeUtils.registerWindowActor("AutoGlanceClick", {
         allFrames: true,
         matches: ["http://*/*", "https://*/*"],
         safeForUntrustedWebProcess: true,
         child: {
-          esModuleURI: "chrome://sine/content/auto-glance/AutoGlanceClickChild.sys.mjs",
+          esModuleURI: `chrome://sine/content/auto-glance/AutoGlanceClickChild.sys.mjs?v=${VERSION}`,
           events: { click: { capture: true, mozSystemGroup: false } },
         },
       });
       state.actorRegistered = true;
+      state.actorVersion = VERSION;
     }
   }
 
@@ -84,6 +90,42 @@
       !owner.hasAttribute("glance-id") &&
       !tab.hasAttribute("glance-id") &&
       !tab.hasAttribute("split-view");
+  }
+
+  function installVisuals(manager) {
+    const backgrounds = new Set();
+    let pending = false;
+    const clear = () => {
+      for (const element of backgrounds) element.removeAttribute("uc-auto-glance-background");
+      backgrounds.clear();
+    };
+    const refresh = () => {
+      pending = false;
+      clear();
+      const tab = gBrowser.selectedTab;
+      if (destroyed || !tab?.hasAttribute("zen-glance-tab")) return;
+      const parent = manager.getTabOrGlanceParent(tab);
+      if (!parent || parent === tab) return;
+      const tabs = parent.group?.hasAttribute("split-view-group") ? parent.group.tabs : [parent];
+      for (const source of tabs) {
+        const element = source.linkedBrowser?.closest(".browserSidebarContainer");
+        if (!element) continue;
+        element.setAttribute("uc-auto-glance-background", "true");
+        backgrounds.add(element);
+      }
+    };
+    const schedule = () => {
+      if (pending || destroyed) return;
+      pending = true;
+      // Native Glance sets its tab flags during the same event turn.
+      queueMicrotask(refresh);
+    };
+    for (const type of ["TabSelect", "GlanceOpen", "GlanceClose", "ZenSplitViewTabsSplit"]) {
+      window.addEventListener(type, schedule);
+      cleanups.push(() => window.removeEventListener(type, schedule));
+    }
+    cleanups.push(clear);
+    refresh();
   }
 
   function destroy() {
@@ -120,6 +162,12 @@
         typeof manager.openGlance !== "function" || typeof window.openLinkIn !== "function") {
       throw new Error("This Zen version does not expose the expected Glance APIs.");
     }
+    const style = document.createElementNS("http://www.w3.org/1999/xhtml", "link");
+    style.rel = "stylesheet";
+    style.href = `chrome://sine/content/auto-glance/auto-glance.css?v=${VERSION}`;
+    document.documentElement.append(style);
+    cleanups.push(() => style.remove());
+    installVisuals(manager);
 
     // This is Zen's own path for target=_blank and window.open links. Reuse
     // the browser-created tab, retaining opener, principals and load options.
@@ -192,7 +240,7 @@
     api.status = "ready";
   }
 
-  const api = { version: "0.2.0", status: "starting", destroy };
+  const api = { version: VERSION, status: "starting", destroy };
   window.AutoGlance = api;
   window.addUnloadListener?.(destroy);
   window.addEventListener("unload", destroy, { once: true });
