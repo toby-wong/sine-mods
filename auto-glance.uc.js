@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name           Auto Glance
-// @version        0.2.1
+// @version        0.2.2
 // @description    Open link-created tabs as native Zen Glance previews.
 // @include        chrome://browser/content/browser.xhtml
 // ==/UserScript==
@@ -9,7 +9,7 @@
   "use strict";
 
   window.AutoGlance?.destroy();
-  const VERSION = "0.2.1";
+  const VERSION = "0.2.2";
   const PREFIX = "uc.auto-glance.";
   const cleanups = [];
   let destroyed = false;
@@ -128,6 +128,92 @@
     refresh();
   }
 
+  function installSplitRecovery(manager) {
+    const splitter = window.gZenViewSplitter;
+    if (!Array.isArray(splitter?._data) || typeof splitter.updateSplitView !== "function") return;
+    let repairing = false;
+    const repair = () => {
+      if (repairing) return 0;
+      repairing = true;
+      let count = 0;
+      try {
+        for (let index = splitter._data.length - 1; index >= 0; index--) {
+          const group = splitter._data[index];
+          // An unfinished "new split" has no groupId. A closed placeholder can
+          // leave this record active, making native Glance throw before its
+          // animation starts. Connected, unloaded tabs are not closed tabs.
+          if (group.groupId || !group.tabs.some(tab => !tab.isConnected || tab.closing)) continue;
+          const remaining = group.tabs.filter(tab => tab.isConnected && !tab.closing);
+          if (remaining.length > 1) continue;
+          if (splitter.currentView === index) {
+            const originalTabs = group.tabs;
+            group.tabs = remaining.filter(tab => tab.linkedBrowser);
+            try { splitter.deactivateCurrentSplitView(); }
+            finally { group.tabs = originalTabs; }
+          }
+          splitter._data.splice(index, 1);
+          if (splitter.currentView > index) splitter.currentView--;
+          for (const tab of remaining) {
+            // The survivor may already be part of a different, working split.
+            if (splitter._data.some(other => other.tabs.includes(tab))) continue;
+            if (tab.linkedBrowser) splitter.resetTabState(tab, true);
+            else {
+              tab.splitView = false;
+              tab.removeAttribute("split-view");
+            }
+          }
+          count++;
+        }
+        api.repairedTransientSplits += count;
+        return count;
+      } finally { repairing = false; }
+    };
+    const original = splitter.updateSplitView;
+    const update = function (...args) {
+      repair();
+      return original.apply(this, args);
+    };
+    splitter.updateSplitView = update;
+    cleanups.push(() => {
+      if (splitter.updateSplitView === update) splitter.updateSplitView = original;
+    });
+
+    if (repair()) recoverInterruptedGlance(manager);
+  }
+
+  function recoverInterruptedGlance(manager) {
+    const tab = gBrowser.selectedTab;
+    const wrapper = manager.browserWrapper;
+    const content = manager.contentWrapper;
+    // Only finish the precise pre-animation failure recovered above. Never
+    // interrupt a running animation or a pending element snapshot.
+    if (!tab?.hasAttribute("zen-glance-tab") || !manager.animatingOpen ||
+        !manager._animating || manager.animatingFullOpen || manager.closingGlance ||
+        !wrapper?.isConnected || !content || !manager.overlay?.isConnected ||
+        wrapper.getAttribute("animate") !== "true" ||
+        wrapper.hasAttribute("has-finished-animation") ||
+        wrapper.getAnimations().length || content.style.opacity === "0" ||
+        wrapper.querySelector(".zen-glance-element-preview")) return;
+
+    const parent = manager.getTabOrGlanceParent(tab);
+    const background = parent?.linkedBrowser?.closest(".browserSidebarContainer");
+    if (!background || parent === tab) return;
+    gZenViewSplitter.onLocationChange(tab.linkedBrowser);
+    manager.quickOpenGlance();
+    background.style.opacity = "0.3";
+    background.style.transform = "scale(0.97)";
+    wrapper.style.height = "100%";
+    wrapper.style.width = "80%";
+    wrapper.removeAttribute("animate");
+    wrapper.setAttribute("has-finished-animation", "true");
+    manager.overlay.style.removeProperty("overflow");
+    manager._animating = false;
+    manager.animatingOpen = false;
+    gBrowser.tabContainer._invalidateCachedTabs();
+    tab.dispatchEvent(new Event("GlanceOpen", { bubbles: true }));
+    api.recoveredPreview = true;
+  }
+
   function destroy() {
     if (destroyed) return;
     destroyed = true;
@@ -168,6 +254,7 @@
     document.documentElement.append(style);
     cleanups.push(() => style.remove());
     installVisuals(manager);
+    installSplitRecovery(manager);
 
     // This is Zen's own path for target=_blank and window.open links. Reuse
     // the browser-created tab, retaining opener, principals and load options.
@@ -240,7 +327,10 @@
     api.status = "ready";
   }
 
-  const api = { version: VERSION, status: "starting", destroy };
+  const api = {
+    version: VERSION, status: "starting",
+    repairedTransientSplits: 0, recoveredPreview: false, destroy,
+  };
   window.AutoGlance = api;
   window.addUnloadListener?.(destroy);
   window.addEventListener("unload", destroy, { once: true });

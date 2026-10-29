@@ -2,7 +2,7 @@
   "id": "auto-glance",
   "name": "Auto Glance",
   "description": "Open website-created tabs as Glance previews. Command-click overrides Glance with a regular background tab.",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "author": "Local",
   "createdAt": "2026-10-26",
   "updatedAt": "2026-10-29",

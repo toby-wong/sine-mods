@@ -25,6 +25,12 @@ would otherwise open its own preview.
 Glance previews are centered in the content area with a blurred backdrop.
 Closing, expanding, and splitting previews retain Zen's native behavior.
 
+The mod also clears abandoned temporary splits whose placeholder tab was
+closed. These can otherwise leave Glance stuck against the left edge before
+its opening animation finishes. Working split groups and unloaded tabs are
+preserved. Updating the mod can recover a preview already interrupted by this
+specific failure without reloading it or its parent page.
+
 Open **Zen Settings → Sine → Auto Glance → Configure** to disable the behavior or
 configure the middle-click/context-menu behavior and Command-click override.
 
@@ -65,3 +71,7 @@ preview and split view, centering, backdrop blur, and 80% page zoom.
 
 `tests/contexts.py` checks private and Little Zen windows. Tests require a
 separate disposable profile whose name includes `test-profile`.
+
+`tests/stale_splits.py` reproduces the closed-placeholder failure, checks
+recovery of both existing pages without a reload, verifies that working split
+layouts survive, and checks that subsequent previews finish opening normally.

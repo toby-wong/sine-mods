@@ -6,7 +6,7 @@
 
 /* Anchor the settled preview to its overlay rather than a flex static position.
    Leave width to Zen so expanding a preview can still grow it to a full tab. */
-.browserSidebarContainer.zen-glance-overlay
+#tabbrowser-tabpanels > .browserSidebarContainer.zen-glance-overlay
   > .browserContainer[has-finished-animation="true"] {
   position: absolute !important;
   inset: 0 !important;
