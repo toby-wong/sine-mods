@@ -1,0 +1,6 @@
+.local-setup.json
+.repair-setup.json
+.DS_Store
+__pycache__/
+reports/
+test-profile/

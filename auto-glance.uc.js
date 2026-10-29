@@ -1,0 +1,205 @@
+// ==UserScript==
+// @name           Auto Glance
+// @version        0.2.0
+// @description    Open link-created tabs as native Zen Glance previews.
+// @include        chrome://browser/content/browser.xhtml
+// ==/UserScript==
+
+(() => {
+  "use strict";
+
+  window.AutoGlance?.destroy();
+  const PREFIX = "uc.auto-glance.";
+  const cleanups = [];
+  let destroyed = false;
+  let commandClickDepth = 0;
+  const backgroundTabs = new WeakSet();
+  const webURL = url => /^https?:\/\//i.test(url || "");
+  const enabled = () => !destroyed &&
+    Services.prefs.getBoolPref(PREFIX + "enabled", true) &&
+    Services.prefs.getBoolPref("zen.glance.enabled", true);
+  const report = error => console.error("[Auto Glance]", error);
+
+  function installCommandClickHook() {
+    const { ClickHandlerParent } = ChromeUtils.importESModule(
+      "resource:///actors/ClickHandlerParent.sys.mjs"
+    );
+    const prototype = ClickHandlerParent.prototype;
+    const key = "__autoGlanceClickHook";
+    let state = prototype[key];
+    if (!state) {
+      state = { original: prototype.contentAreaClick, windows: new Map() };
+      state.wrapped = function (data) {
+        const browser = this.manager?.browsingContext?.top?.embedderElement;
+        const win = browser?.documentGlobal;
+        const handler = state.windows.get(win) ||
+          [...state.windows].find(([owner]) => owner.gBrowser === win?.gBrowser)?.[1];
+        const run = () => state.original.call(this, data);
+        return handler ? handler(data, run) : run();
+      };
+      Object.defineProperty(prototype, key, { value: state, configurable: true });
+      prototype.contentAreaClick = state.wrapped;
+    }
+    state.windows.set(window, (data, run) => {
+      if (destroyed || !Services.prefs.getBoolPref(PREFIX + "cmd-click-background", true) ||
+          data.button !== 0 || !data.metaKey || data.altKey || data.ctrlKey || data.shiftKey) {
+        return run();
+      }
+      commandClickDepth++;
+      try { return run(); } finally { commandClickDepth--; }
+    });
+    cleanups.push(() => {
+      state.windows.delete(window);
+      if (state.windows.size) return;
+      if (state.actorRegistered) {
+        ChromeUtils.unregisterWindowActor("AutoGlanceClick");
+        state.actorRegistered = false;
+      }
+      if (prototype.contentAreaClick === state.wrapped) {
+        prototype.contentAreaClick = state.original;
+        delete prototype[key];
+      }
+    });
+    if (!state.actorRegistered) {
+      ChromeUtils.registerWindowActor("AutoGlanceClick", {
+        allFrames: true,
+        matches: ["http://*/*", "https://*/*"],
+        safeForUntrustedWebProcess: true,
+        child: {
+          esModuleURI: "chrome://sine/content/auto-glance/AutoGlanceClickChild.sys.mjs",
+          events: { click: { capture: true, mozSystemGroup: false } },
+        },
+      });
+      state.actorRegistered = true;
+    }
+  }
+
+  function eligible(tab, owner, url) {
+    return enabled() && webURL(url) &&
+      tab && owner && tab !== owner && !tab.closing && !owner.closing &&
+      tab.isConnected && owner.isConnected &&
+      tab.ownerDocument === document && owner.ownerDocument === document &&
+      tab.userContextId === owner.userContextId &&
+      !owner.hasAttribute("zen-empty-tab") &&
+      !owner.hasAttribute("glance-id") &&
+      !tab.hasAttribute("glance-id") &&
+      !tab.hasAttribute("split-view");
+  }
+
+  function destroy() {
+    if (destroyed) return;
+    destroyed = true;
+    for (const undo of cleanups.splice(0).reverse()) {
+      try { undo(); } catch (error) { report(error); }
+    }
+    if (window.AutoGlance === api) delete window.AutoGlance;
+  }
+
+  async function install() {
+    if (!window.gBrowserInit?.delayedStartupFinished) {
+      await new Promise(resolve => {
+        let observing = true;
+        const stop = () => {
+          if (!observing) return;
+          observing = false;
+          Services.obs.removeObserver(started, "browser-delayed-startup-finished");
+          resolve();
+        };
+        const started = subject => {
+          if (subject !== window) return;
+          stop();
+        };
+        Services.obs.addObserver(started, "browser-delayed-startup-finished");
+        cleanups.push(stop);
+      });
+    }
+    await gZenStartup.promiseInitialized;
+    if (destroyed) return;
+    const manager = window.gZenGlanceManager;
+    if (typeof manager?.shouldOpenTabInGlance !== "function" ||
+        typeof manager.openGlance !== "function" || typeof window.openLinkIn !== "function") {
+      throw new Error("This Zen version does not expose the expected Glance APIs.");
+    }
+
+    // This is Zen's own path for target=_blank and window.open links. Reuse
+    // the browser-created tab, retaining opener, principals and load options.
+    const originalDecision = manager.shouldOpenTabInGlance;
+    const decide = function (tab, uri) {
+      if (commandClickDepth || backgroundTabs.has(tab)) return false;
+      return eligible(tab, tab?.owner, uri?.spec) ||
+        originalDecision.call(this, tab, uri);
+    };
+    manager.shouldOpenTabInGlance = decide;
+    cleanups.push(() => {
+      if (manager.shouldOpenTabInGlance === decide) {
+        manager.shouldOpenTabInGlance = originalDecision;
+      }
+    });
+
+    installCommandClickHook();
+
+    // Modified clicks and "Open Link in New Tab" use the normal link loader.
+    // Capture its resulting browser; do not replace its navigation or security
+    // parameters with a fresh Glance load.
+    const originalOpen = window.openLinkIn;
+    const open = function (url, where, params, ...rest) {
+      if (commandClickDepth && ["tab", "tabshifted"].includes(where) && webURL(url)) {
+        return originalOpen.call(this, url, where, {
+          ...params,
+          inBackground: true,
+          resolveOnNewTabCreated: browser => {
+            const tab = gBrowser.getTabForBrowser(browser);
+            if (tab) backgroundTabs.add(tab);
+            params?.resolveOnNewTabCreated?.(browser);
+          },
+        }, ...rest);
+      }
+      if (!enabled() || !Services.prefs.getBoolPref(PREFIX + "modified-clicks", true) ||
+          !["tab", "tabshifted"].includes(where) || !webURL(url) ||
+          !params?.triggeringPrincipal?.isContentPrincipal ||
+          params.fromExternal || params.initiatedByURLBar ||
+          // Native split view supplies its own creation callback.
+          params.resolveOnNewTabCreated || params.resolveOnContentBrowserCreated) {
+        return originalOpen.call(this, url, where, params, ...rest);
+      }
+      const context = window.gContextMenu;
+      const sourceBrowser = params.openerBrowser ||
+        (context?.onLink && context.linkURL === url ? context.browser : null);
+      const owner = sourceBrowser && gBrowser.getTabForBrowser(sourceBrowser);
+      if (!owner || owner.hasAttribute("glance-id")) {
+        return originalOpen.call(this, url, where, params, ...rest);
+      }
+      let browser;
+      const result = originalOpen.call(this, url, where, {
+        ...params,
+        resolveOnNewTabCreated: created => { browser = created; },
+      }, ...rest);
+      const tab = browser && gBrowser.getTabForBrowser(browser);
+      if (eligible(tab, owner, url)) {
+        try {
+          Promise.resolve(manager.openGlance({}, tab, owner)).catch(report);
+        } catch (error) {
+          // The native tab remains available if Glance cannot open.
+          report(error);
+        }
+      }
+      return result;
+    };
+    window.openLinkIn = open;
+    cleanups.push(() => {
+      if (window.openLinkIn === open) window.openLinkIn = originalOpen;
+    });
+    api.status = "ready";
+  }
+
+  const api = { version: "0.2.0", status: "starting", destroy };
+  window.AutoGlance = api;
+  window.addUnloadListener?.(destroy);
+  window.addEventListener("unload", destroy, { once: true });
+  cleanups.push(() => window.removeEventListener("unload", destroy));
+  install().catch(error => {
+    api.status = "error";
+    api.error = String(error);
+    report(error);
+  });
+})();
