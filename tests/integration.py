@@ -283,14 +283,187 @@ def run(args):
         wait("ttRoot.hasAttribute('split-view')")
         settle()
         split = m.js("""
+          window.ttSplit=ttRoot.group;
           return {split:ttRoot.hasAttribute("split-view"),
-            styled:ttRoot.hasAttribute("uc-tree-node"),
+            styled:ttSplit.hasAttribute("uc-tree-node"),
             context:ttRoot.linkedBrowser.browsingContext.id,
-            childrenPromoted:TreeTabs.parentOf(ttChild)===null};
+            childrenKept:TreeTabs.parentOf(ttChild)===ttSplit,
+            units:TreeTabs.snapshot().filter(n=>n.kind==="split"&&n.tab===ttSplit.id).length};
         """)
-        check("option_split_preserves_source_and_excludes_tree", split,
-              split["split"] and not split["styled"] and
-              split["context"] == original_context and split["childrenPromoted"])
+        check("option_split_preserves_source_and_tree", split,
+              split["split"] and split["styled"] and split["units"] == 1 and
+              split["context"] == original_context and split["childrenKept"])
+
+        m.js("""
+          window.ttSplitParent=gBrowser.addTrustedTab("about:blank",{inBackground:true});
+          window.ttSplitPanes=[...ttSplit.tabs];
+          window.ttSplitContexts=ttSplitPanes.map(t=>t.linkedBrowser.browsingContext.id);
+          window.ttSplitDocuments=ttSplitPanes.map(t=>t.linkedBrowser.browsingContext.currentWindowGlobal.innerWindowId);
+          window.ttSplitIdentity=TreeTabs.snapshot().find(n=>n.tab===ttSplit.id).id;
+          TreeTabs.nest(ttSplitPanes[1],ttSplitParent);
+        """)
+        settle()
+        check("split_is_one_child_from_either_pane", m.js("""
+          return ttSplitPanes.every(t=>TreeTabs.parentOf(t)===ttSplitParent&&TreeTabs.depthOf(t)===1)
+            && TreeTabs.parentOf(ttChild)===ttSplit && TreeTabs.depthOf(ttChild)===2
+            && ttSplit.tabs.length===2;
+        """))
+
+        m.js("gBrowser.selectedTab=ttSplitPanes[1];")
+        click("next", "\ue03d")
+        settle()
+        check("command_click_from_second_pane_nests_under_session", m.js("""
+          window.ttSplitLink=[...gZenWorkspaces.allStoredTabs].find(t=>
+            t.openerTab===ttSplitPanes[1]&&!ttSplitPanes.includes(t));
+          return !!ttSplitLink&&TreeTabs.parentOf(ttSplitLink)===ttSplit
+            && gBrowser.selectedTab===ttSplitPanes[1]
+            && !ttSplitLink.group&&!ttSplitLink.hasAttribute("zen-glance-tab");
+        """))
+
+        m.js("""
+          window.ttNestedA=gBrowser.addTrustedTab("about:blank",{inBackground:true});
+          window.ttNestedB=gBrowser.addTrustedTab("about:blank",{inBackground:true});
+          gZenViewSplitter.splitTabs([ttNestedA,ttNestedB],"grid",-1,{activate:false});
+          window.ttNestedSplit=ttNestedA.group;
+        """)
+        settle()
+        check("split_can_be_child_of_another_split", m.js("""
+          return TreeTabs.nest(ttNestedB,ttSplitPanes[0]) &&
+            TreeTabs.parentOf(ttNestedA)===ttSplit && TreeTabs.depthOf(ttNestedB)===2 &&
+            ttNestedA.group===ttNestedSplit&&ttNestedB.group===ttNestedSplit;
+        """))
+        m.js("""
+          window.ttNestedChild=gBrowser.addTrustedTab("about:blank",{inBackground:true});
+          TreeTabs.nest(ttNestedChild,ttNestedB);
+          gBrowser.selectedTab=ttNestedChild;
+          ttSplitParent.querySelector(".uc-tree-twisty").click();
+        """)
+        check("collapse_hides_whole_split_sessions", m.js("""
+          return gBrowser.selectedTab===ttSplitParent&&getComputedStyle(ttSplit).display==="none"&&
+            getComputedStyle(ttNestedSplit).display==="none"&&
+            ttSplitPanes.every(t=>t.getBoundingClientRect().height===0);
+        """))
+        m.js("gBrowser.selectedTab=ttNestedB;")
+        check("selecting_either_pane_reveals_ancestors", m.js("""
+          return !ttSplit.hasAttribute("uc-tree-hidden")&&!ttNestedSplit.hasAttribute("uc-tree-hidden")&&
+            ttSplitParent.querySelector(".uc-tree-twisty").getAttribute("aria-expanded")==="true";
+        """))
+        m.js("""
+          gBrowser.selectedTab=ttNestedChild;
+          ttSplit.querySelector(":scope > .uc-tree-twisty").click();
+        """)
+        check("split_arrow_collapses_children_without_hiding_panes", m.js("""
+          return ttSplit.tabs.includes(gBrowser.selectedTab)&&
+            !ttSplit.hasAttribute("uc-tree-hidden")&&ttNestedSplit.hasAttribute("uc-tree-hidden")&&
+            ttSplitPanes.every(t=>t.getBoundingClientRect().height>0)&&
+            ttSplit.querySelectorAll(".uc-tree-twisty").length===1;
+        """))
+        m.js("TreeTabs.toggleCollapse(ttSplit);")
+        check("split_indentation", m.js("""
+          return parseFloat(getComputedStyle(ttSplit).marginInlineStart)>=14 &&
+            parseFloat(getComputedStyle(ttNestedSplit).marginInlineStart)>=28;
+        """))
+
+        m.js("""
+          TabContextMenu.contextTab=ttNestedB;
+          document.getElementById("uc-tree-outdent").doCommand();
+        """)
+        settle()
+        check("pane_context_menu_outdents_whole_session", m.js("""
+          return TreeTabs.parentOf(ttNestedA)===ttSplitParent&&
+            TreeTabs.parentOf(ttNestedB)===ttSplitParent&&ttNestedSplit.tabs.length===2&&
+            TreeTabs.parentOf(ttNestedChild)===ttNestedSplit;
+        """))
+        check("split_state_saved_on_each_pane", m.js("""
+          const values=ttSplitPanes.map(t=>JSON.parse(SessionStore.getCustomTabValue(t,"uc-tree-tabs-state")));
+          return values.every(v=>v.id===ttSplitIdentity&&v.split===ttSplit.id)&&
+            JSON.stringify(values[0])===JSON.stringify(values[1]);
+        """))
+        check("split_reparenting_preserves_panes_and_documents", m.js("""
+          return ttSplitPanes.every((t,i)=>t.group===ttSplit&&
+            t.linkedBrowser.browsingContext.id===ttSplitContexts[i]&&
+            t.linkedBrowser.browsingContext.currentWindowGlobal.innerWindowId===ttSplitDocuments[i]);
+        """))
+
+        m.js("""
+          window.ttThirdPane=gBrowser.addTrustedTab("about:blank",{inBackground:true});
+          window.ttNestedIdentity=TreeTabs.snapshot().find(n=>n.tab===ttNestedSplit.id).id;
+          gZenViewSplitter.splitTabs([ttNestedB,ttThirdPane],"grid",-1,{activate:false});
+        """)
+        settle()
+        check("adding_pane_preserves_session_tree", m.js("""
+          return ttNestedSplit.tabs.length===3&&TreeTabs.parentOf(ttThirdPane)===ttSplitParent&&
+            TreeTabs.parentOf(ttNestedChild)===ttNestedSplit&&
+            TreeTabs.snapshot().find(n=>n.tab===ttNestedSplit.id).id===ttNestedIdentity;
+        """))
+        m.js("gBrowser.removeTab(ttNestedA,{animate:false,skipPermitUnload:true});")
+        settle()
+        check("closing_first_of_three_panes_keeps_session_identity", m.js("""
+          return ttNestedSplit.tabs.length===2&&TreeTabs.parentOf(ttNestedB)===ttSplitParent&&
+            TreeTabs.parentOf(ttNestedChild)===ttNestedSplit&&
+            TreeTabs.snapshot().find(n=>n.tab===ttNestedSplit.id).id===ttNestedIdentity;
+        """))
+        m.js("gBrowser.removeTab(ttNestedB,{animate:false,skipPermitUnload:true});")
+        settle()
+        check("last_surviving_pane_inherits_session_tree", m.js("""
+          return ttThirdPane.isConnected&&!ttThirdPane.group&&TreeTabs.parentOf(ttThirdPane)===ttSplitParent&&
+            TreeTabs.parentOf(ttNestedChild)===ttThirdPane&&
+            TreeTabs.snapshot().find(n=>n.tab===ttThirdPane.id).id===ttNestedIdentity;
+        """))
+
+        m.js("""
+          window.ttUnsplitA=gBrowser.addTrustedTab("about:blank",{inBackground:true});
+          window.ttUnsplitB=gBrowser.addTrustedTab("about:blank",{inBackground:true});
+          gZenViewSplitter.splitTabs([ttUnsplitA,ttUnsplitB],"grid",-1,{activate:false});
+        """)
+        settle()
+        m.js("""
+          window.ttUnsplitGroup=ttUnsplitA.group;
+          window.ttUnsplitChild=gBrowser.addTrustedTab("about:blank",{inBackground:true});
+          TreeTabs.nest(ttUnsplitA,ttSplitParent);
+          TreeTabs.nest(ttUnsplitChild,ttUnsplitB);
+          gZenViewSplitter.removeGroup(gZenViewSplitter._data.findIndex(g=>g.tabs.includes(ttUnsplitA)));
+        """)
+        settle()
+        check("unsplitting_keeps_surviving_tree_and_peer", m.js("""
+          return !ttUnsplitA.group&&!ttUnsplitB.group&&
+            TreeTabs.parentOf(ttUnsplitA)===ttSplitParent&&TreeTabs.parentOf(ttUnsplitB)===ttSplitParent&&
+            TreeTabs.parentOf(ttUnsplitChild)===ttUnsplitA;
+        """))
+
+        m.js("""
+          window.ttMergeA=gBrowser.addTrustedTab("about:blank",{inBackground:true});
+          window.ttMergeB=gBrowser.addTrustedTab("about:blank",{inBackground:true});
+          window.ttMergeChild=gBrowser.addTrustedTab("about:blank",{inBackground:true});
+          TreeTabs.nest(ttMergeA,ttSplitParent);
+          TreeTabs.nest(ttMergeB,ttMergeA);
+          TreeTabs.nest(ttMergeChild,ttMergeB);
+          gZenViewSplitter.splitTabs([ttMergeA,ttMergeB],"grid",-1,{activate:false});
+        """)
+        settle()
+        check("splitting_parent_with_child_merges_without_cycle", m.js("""
+          window.ttMergeGroup=ttMergeA.group;
+          return TreeTabs.parentOf(ttMergeA)===ttSplitParent&&
+            TreeTabs.parentOf(ttMergeChild)===ttMergeGroup&&
+            !TreeTabs.nest(ttMergeA,ttMergeB)&&!TreeTabs.nest(ttMergeGroup,ttMergeChild);
+        """))
+        m.js("gBrowser.moveTabAfter(ttMergeGroup,ttSplitParent);")
+        settle()
+        check("native_split_reorder_detaches_whole_session", m.js("""
+          return ttMergeGroup.tabs.length===2&&TreeTabs.parentOf(ttMergeB)===null&&
+            TreeTabs.parentOf(ttMergeChild)===ttSplitParent;
+        """))
+        m.js("""
+          TreeTabs.nest(ttMergeA,ttSplitParent);
+          TreeTabs.nest(ttMergeChild,ttMergeB);
+          for(const tab of [...ttMergeGroup.tabs])
+            gBrowser.removeTab(tab,{animate:false,skipPermitUnload:true});
+        """)
+        settle()
+        check("closing_whole_split_promotes_children_without_closing_them", m.js("""
+          return ttMergeChild.isConnected&&!ttMergeChild.closing&&
+            TreeTabs.parentOf(ttMergeChild)===ttSplitParent;
+        """))
 
         m.js("""
           window.ttCloseParent=gBrowser.addTrustedTab("about:blank",{inBackground:true});
@@ -321,15 +494,17 @@ def run(args):
         m.js("for(const t of ttPerf)gBrowser.removeTab(t,{animate:false,skipPermitUnload:true});")
         settle()
 
-        # Set up a clean three-tab tree for unload and actual restart checks.
+        # Keep a split between an ordinary parent and child for restart checks.
         m.js("""
           window.ttSaveRoot=gBrowser.addTrustedTab("about:blank",{inBackground:false});
           window.ttSaveChild=gBrowser.addTrustedTab("about:blank",{inBackground:true});
           window.ttSaveGrandchild=gBrowser.addTrustedTab("about:blank",{inBackground:true});
+          window.ttSavePane=gBrowser.addTrustedTab("about:blank",{inBackground:true});
           for(const t of [...gZenWorkspaces.allStoredTabs]){
-            if(![ttSaveRoot,ttSaveChild,ttSaveGrandchild].includes(t)&&!t.hasAttribute("zen-empty-tab"))
+            if(![ttSaveRoot,ttSaveChild,ttSaveGrandchild,ttSavePane].includes(t)&&!t.hasAttribute("zen-empty-tab"))
               gBrowser.removeTab(t,{animate:false,skipPermitUnload:true});
           }
+          gZenViewSplitter.splitTabs([ttSaveChild,ttSavePane],"grid",-1,{activate:false});
         """)
         settle()
         m.js("""
@@ -339,7 +514,7 @@ def run(args):
           TreeTabs.toggleCollapse(ttSaveRoot);
         """)
         before_unload = m.js("""
-          return {ids:[ttSaveRoot,ttSaveChild,ttSaveGrandchild].map(t=>t.linkedBrowser.browsingContext.id),
+          return {ids:[ttSaveRoot,ttSaveChild,ttSaveGrandchild,ttSavePane].map(t=>t.linkedBrowser.browsingContext.id),
             tree:TreeTabs.snapshot()};
         """)
         m.js('Services.prefs.setBoolPref("uc.tree-tabs.enabled",false);')
@@ -350,12 +525,12 @@ def run(args):
         m.js('Services.prefs.setBoolPref("uc.tree-tabs.enabled",true);')
         settle()
         check("reenable_restores_tree", m.js(
-            "return TreeTabs.depthOf(ttSaveGrandchild)===2&&ttSaveChild.hasAttribute('uc-tree-hidden');"))
+            "return TreeTabs.depthOf(ttSaveGrandchild)===2&&TreeTabs.itemOf(ttSaveChild).hasAttribute('uc-tree-hidden');"))
         assert result["checks"]["reenable_restores_tree"]
         m.js("TreeTabs.destroy();")
         check("unload_preserves_live_tabs", m.js("""
           return {clear:!document.querySelector("[uc-tree-hidden],.uc-tree-twisty"),
-            ids:[ttSaveRoot,ttSaveChild,ttSaveGrandchild].map(t=>t.linkedBrowser.browsingContext.id)};
+            ids:[ttSaveRoot,ttSaveChild,ttSaveGrandchild,ttSavePane].map(t=>t.linkedBrowser.browsingContext.id)};
         """))
         assert result["checks"]["unload_preserves_live_tabs"]["clear"]
         assert result["checks"]["unload_preserves_live_tabs"]["ids"] == before_unload["ids"]

@@ -14,7 +14,7 @@
   },
   {
     "type": "text",
-    "label": "Use the arrow beside a parent tab to collapse its children. Right-click a tab → Tree tabs to nest existing tabs or move them out one level. Groups, pins, Essentials, splits and Glance previews are outside this prototype.",
+    "label": "Use the arrow beside a parent to collapse its children. Right-click a tab or either pane of a split → Tree tabs to nest it or move it out one level. A split session moves as one item. Ordinary groups, pins, Essentials and Glance previews are outside this prototype.",
     "size": "13px"
   }
 ]

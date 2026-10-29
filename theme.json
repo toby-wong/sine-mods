@@ -1,8 +1,8 @@
 {
   "id": "tree-tabs-prototype",
   "name": "Tree Tabs Prototype",
-  "description": "Parent and child tabs in Zen's sidebar, with collapsible branches.",
-  "version": "0.1.0",
+  "description": "Parent and child tabs and split sessions in Zen's sidebar, with collapsible branches.",
+  "version": "0.2.0",
   "author": "Local",
   "createdAt": "2026-10-29",
   "updatedAt": "2026-10-29",
