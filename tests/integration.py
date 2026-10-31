@@ -69,7 +69,8 @@ def run(args):
 
     def click(identifier, modifier=None):
         content()
-        wait("document.readyState === 'complete'")
+        wait("document.readyState === 'complete' && document.getElementById(" +
+             json.dumps(identifier) + ")")
         point = m.js("""
           const rect=document.getElementById(arguments[0]).getBoundingClientRect();
           return {x:Math.round(rect.x+30),y:Math.round(rect.y+rect.height/2)};
@@ -111,7 +112,7 @@ def run(args):
         """, [base])
         wait("gBrowser.selectedBrowser.currentURI.spec === " + json.dumps(base + "/root"))
         content()
-        wait("document.readyState === 'complete'")
+        wait("document.readyState === 'complete' && document.getElementById('draft')")
         original_marker = m.js("""
           document.getElementById("draft").value="A draft changed after loading";
           return window.wrappedJSObject.pageMarker;

@@ -13,6 +13,8 @@ Zen's existing sidebar.
 - **Right-click a tab → Tree tabs:** nest it under the previous ordinary tab,
   move it out one level, or expand the current Space's branches.
 - **Close a parent:** its children remain open and move up a level.
+- **Move a parent in the sidebar or to another Space:** its whole branch follows,
+  including collapsed children and grandchildren, in the same order.
 - **New tabs, bookmarks, and external links:** remain roots unless they have
   an actual in-page opener.
 
@@ -31,10 +33,13 @@ In particular, an ordinary website-created Glance is not converted into a
 child tab; Command-click's background-tab override is the usual way to create
 children.
 
-This version does not implement drag-to-reparent, dragging a whole branch, or
-synchronizing trees between windows. Native dragging/reordering keeps the
-browser's chosen placement, detaches the moved tab, and promotes its children.
-Use the Tree tabs menu for deliberate nesting and outdenting.
+Dragging/reordering a nested parent detaches that branch from its former
+parent and carries its descendants with it. Selecting both a parent and a child
+for a move keeps their relationship intact. Moving a branch preserves its pages
+and collapse state.
+
+This version does not implement drag-to-reparent or synchronizing trees between
+windows. Use the Tree tabs menu for deliberate nesting and outdenting.
 
 Collapsing a branch hides sidebar rows; it does not unload web pages.
 
@@ -71,6 +76,10 @@ duplicates, ordering, workspace boundaries, pinning/grouping, a large set of
 unloaded tabs, and disabling/reloading the mod. A separate browser restart
 checks session restoration. The existing Auto Glance regression suite is also
 run with Tree Tabs enabled.
+
+`tests/branch_moves.py` checks branch order, nested and collapsed branches,
+multi-tab moves, Space menu moves, late workspace attribute changes, page and
+selection preservation, and Zen's native drop handler and animation cleanup.
 
 `tests/integration.py` refuses to operate unless the browser's active profile
 matches the supplied disposable `test-profile` path.

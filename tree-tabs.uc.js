@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name           Tree Tabs Prototype
-// @version        0.1.0
+// @version        0.1.1
 // @description    Parent and child tabs in Zen's existing sidebar.
 // @include        chrome://browser/content/browser.xhtml
 // ==/UserScript==
@@ -13,6 +13,7 @@
   const STORAGE = "uc-tree-tabs-state";
   const nodes = new Map();
   const pendingParents = new Map();
+  const pendingMoves = new Set();
   const cleanups = [];
   let destroyed = false;
   let moving = 0;
@@ -52,7 +53,7 @@
     if (!node) {
       node = {
         tab, id: Services.uuid.generateUUID().toString(),
-        parentId: "", collapsed: false, parent: null, children: [],
+        parentId: "", collapsed: false, parent: null, children: [], space: workspace(tab),
       };
       nodes.set(tab, node);
     }
@@ -96,7 +97,7 @@
     tab.querySelector(".uc-tree-twisty")?.remove();
   }
 
-  // Native pinning/grouping/moving wins. Promote surviving children rather
+  // Native pinning/grouping wins. Promote surviving children rather
   // than fighting the browser's move or pulling another tab out of a group.
   function release(node, closing = false) {
     if (!node) return;
@@ -113,6 +114,66 @@
       node.parent = null;
       node.collapsed = false;
       if (changed) save(node);
+    }
+  }
+
+  function followMovedBranches() {
+    if (!enabled()) {
+      pendingMoves.clear();
+      return;
+    }
+    // A drag across Spaces sets the workspace attribute after TabMove, and
+    // some native moves change only that attribute. Compare the final state
+    // with the last reconciliation before rebuilding any parent links.
+    for (const node of nodes.values()) {
+      if (node.space && workspace(node.tab) && node.space !== workspace(node.tab)) {
+        pendingMoves.add(node);
+      }
+    }
+    const moved = new Set([...pendingMoves].filter(node =>
+      nodes.get(node.tab) === node && eligible(node.tab) && node.tab.ownerDocument === document));
+    pendingMoves.clear();
+    // Native multi-tab moves emit one event per tab. A selected descendant
+    // belongs to its moved ancestor's branch, not to a second independent move.
+    const roots = [...moved].filter(node => {
+      for (let parent = node.parent; parent; parent = parent.parent) {
+        if (moved.has(parent) && workspace(parent.tab) === workspace(node.tab)) return false;
+      }
+      return true;
+    });
+    for (const node of roots) {
+      const space = workspace(node.tab);
+      const branch = [];
+      const collect = child => {
+        if (!eligible(child.tab) || child.tab.ownerDocument !== document) return;
+        // Respect an independent move to a different Space in the same batch.
+        if (child !== node && moved.has(child) && workspace(child.tab) !== space) return;
+        branch.push(child);
+        child.children.forEach(collect);
+      };
+      collect(node);
+      moving++;
+      try {
+        if (node.space !== space && gZenWorkspaces.workspaceElement(space)) {
+          // Use the native operation so Space membership and last-selected-tab
+          // bookkeeping change without recreating browsers or reloading pages.
+          gZenWorkspaces.moveTabsToWorkspace(branch.map(child => child.tab), space);
+          gZenWorkspaces.updateTabsContainers();
+        }
+        const followers = branch.slice(1).filter(child => workspace(child.tab) === space);
+        if (followers.length) gBrowser.moveTabsAfter(followers.map(child => child.tab), node.tab);
+        // Reordering detaches only the branch root. Its descendants, saved
+        // identities, and collapse flags all stay intact.
+        if (node.parent) node.parent.children = node.parent.children.filter(child => child !== node);
+        node.parent = null;
+        if (node.parentId) {
+          node.parentId = "";
+          save(node);
+        }
+        for (const child of branch) child.space = workspace(child.tab);
+      } finally {
+        moving--;
+      }
     }
   }
 
@@ -169,6 +230,7 @@
 
   function reconcile() {
     const started = performance.now();
+    followMovedBranches();
     const tabs = allTabs();
     const live = new Set(tabs);
     for (const [tab] of nodes) {
@@ -192,6 +254,7 @@
       if (!eligible(node.tab)) release(node);
       node.children = [];
       node.parent = null;
+      node.space = workspace(node.tab);
     }
     for (const tab of tabs) {
       const node = nodes.get(tab);
@@ -233,6 +296,7 @@
   }
 
   function nest(tab, parentTab, update = true) {
+    followMovedBranches();
     if (!enabled() || !eligible(tab) || !eligible(parentTab) ||
         tab === parentTab || workspace(tab) !== workspace(parentTab)) return false;
     const node = ensure(tab);
@@ -261,6 +325,7 @@
   }
 
   function outdent(tab) {
+    followMovedBranches();
     if (!enabled()) return false;
     const node = nodes.get(tab);
     const parent = node?.parent;
@@ -280,6 +345,7 @@
   }
 
   function toggleCollapse(tab) {
+    followMovedBranches();
     if (!enabled()) return;
     const node = nodes.get(tab);
     if (!node?.children.length) return;
@@ -389,7 +455,7 @@
     }
     const style = document.createElementNS("http://www.w3.org/1999/xhtml", "link");
     style.rel = "stylesheet";
-    style.href = "chrome://sine/content/tree-tabs-prototype/tree-tabs.css?v=0.1.0";
+    style.href = "chrome://sine/content/tree-tabs-prototype/tree-tabs.css?v=0.1.1";
     document.documentElement.append(style);
     cleanups.push(() => style.remove());
 
@@ -404,12 +470,14 @@
     listen(window, "TabClose", event => {
       const node = nodes.get(event.target);
       release(node, true);
+      pendingMoves.delete(node);
       nodes.delete(event.target);
       pendingParents.delete(event.target);
       schedule();
     });
     listen(window, "TabMove", event => {
-      if (!moving && enabled()) release(nodes.get(event.target));
+      const node = nodes.get(event.target);
+      if (!moving && enabled() && node) pendingMoves.add(node);
       if (!moving) schedule();
     });
     listen(window, "TabSelect", () => revealSelected());
@@ -417,7 +485,9 @@
       listen(window, type, () => schedule());
     }
     listen(window, "SSTabRestored", event => {
-      ensure(event.target, true);
+      const node = ensure(event.target, true);
+      node.space = workspace(event.target);
+      pendingMoves.delete(node);
       pendingParents.delete(event.target);
       schedule();
     });
@@ -446,11 +516,12 @@
     document.documentElement.style.removeProperty("--uc-tree-indent");
     nodes.clear();
     pendingParents.clear();
+    pendingMoves.clear();
     if (window.TreeTabs === api) delete window.TreeTabs;
   }
 
   const api = window.TreeTabs = {
-    version: "0.1.0", status: "starting", reconciliations: 0, lastReconcileMs: 0,
+    version: "0.1.1", status: "starting", reconciliations: 0, lastReconcileMs: 0,
     nest, outdent, toggleCollapse, expandAll, destroy,
     parentOf: tab => nodes.get(tab)?.parent?.tab || null,
     depthOf: tab => depth(nodes.get(tab)),
