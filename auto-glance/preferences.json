@@ -1,0 +1,31 @@
+[
+  {
+    "type": "text",
+    "label": "Auto Glance",
+    "size": "20px",
+    "margin": "12px 0"
+  },
+  {
+    "property": "uc.auto-glance.enabled",
+    "label": "Open website-created tabs in Glance",
+    "type": "checkbox",
+    "defaultValue": true
+  },
+  {
+    "property": "uc.auto-glance.modified-clicks",
+    "label": "Also use Glance for middle-click and Open Link in New Tab",
+    "type": "checkbox",
+    "defaultValue": true
+  },
+  {
+    "property": "uc.auto-glance.cmd-click-background",
+    "label": "Command-click always opens a regular background tab",
+    "type": "checkbox",
+    "defaultValue": true
+  },
+  {
+    "type": "text",
+    "label": "Use Glance's expand button to keep a full tab, its split button for a split, or Escape to dismiss. Option-click split view keeps working.",
+    "size": "13px"
+  }
+]
