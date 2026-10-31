@@ -56,8 +56,8 @@ browser behavior has **not** been tested.
 
 ### Install from GitHub with Sine
 
-Once this repository has been pushed to GitHub, paste **one full subfolder URL**
-at a time into Sine's custom repository installation field:
+Paste **one full subfolder URL** at a time into Sine's custom repository
+installation field:
 
 | Mod | Repository URL to paste |
 | --- | --- |
@@ -166,6 +166,14 @@ selected entries from it. Reopen Zen afterward.
 
 Each mod directory contains its source, manifest, preferences, and individual
 README. The installer and its tests live in `scripts/` and `tests/`.
+
+Project agent guides record the current source status, implementation constraints,
+validation requirements, and proposed future directions:
+
+- [Little Zen](little-zen/AGENTS.md)
+- [Auto Glance](auto-glance/AGENTS.md)
+- [Tree Tabs Prototype](tree-tabs-prototype/AGENTS.md)
+- [Alt-click Split View](alt-click-split-view/AGENTS.md)
 
 ```sh
 python3 -m unittest discover -s tests -v
