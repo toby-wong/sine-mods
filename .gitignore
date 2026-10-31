@@ -1,0 +1,15 @@
+# Machine-specific setup, profiles, generated reports, and secrets
+.local-*.json
+.repair-setup.json
+.split-update.json
+.DS_Store
+Thumbs.db
+__pycache__/
+*.py[cod]
+.venv/
+reports/
+test-profile/
+backups/
+*.bundle
+.env
+.env.*
