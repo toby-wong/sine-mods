@@ -1,0 +1,22 @@
+{
+  "id": "tree-tabs-prototype",
+  "name": "Tree Tabs Prototype",
+  "description": "Parent and child tabs in Zen's sidebar, with collapsible branches.",
+  "version": "0.1.1",
+  "author": "Local",
+  "createdAt": "2026-10-29",
+  "updatedAt": "2026-10-31",
+  "homepage": "",
+  "fork": ["zen"],
+  "tags": ["tabs", "navigation"],
+  "ai": "yes",
+  "scripts": {
+    "tree-tabs.uc.js": {
+      "include": ["chrome://browser/content/browser.xhtml"],
+      "loadOrder": 70
+    }
+  },
+  "style": {"chrome": "", "content": ""},
+  "preferences": "preferences.json",
+  "supportsUnload": true
+}

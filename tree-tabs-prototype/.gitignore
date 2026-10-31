@@ -1,0 +1,8 @@
+.DS_Store
+.local-setup.json
+.split-update.json
+__pycache__/
+*.py[cod]
+.venv/
+reports/
+test-profile/
