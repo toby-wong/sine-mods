@@ -1,6 +1,25 @@
 # Local split fixes
 
-This is a local patch of Alt-click Split View 1.4.2 for the installed Zen 1.23.4b.
+## 1.4.4-local — 2026-10-31
+
+- Use only the native tab accelerator when passing a split click through
+  Firefox's click handler: Ctrl on Windows/Linux, Command on macOS. Previously,
+  both flags were set. Navigation still uses the original principal and referrer.
+- Use `ctrl` as the fallback for an unset `zen.glance.activation-method` in the
+  parent hook and settings panel, matching the content actor and native Zen.
+  Previously, the parent could treat Alt as a Glance conflict after the actor
+  had already consumed the click, leaving no split.
+- Label the Meta trigger for Windows/Super on non-Mac platforms and Command on
+  macOS. Existing trigger preferences and the default Alt/Option gesture stay
+  the same.
+
+Automated parent-hook tests cover Windows, macOS, and Linux routing, an unset
+Glance preference, conflicts, and the disabled mod. Live regression evidence is
+from macOS with Zen 1.24b; native Windows input remains unverified.
+
+## 1.4.3-local
+
+The original local patch targeted Alt-click Split View 1.4.2 on Zen 1.23.4b.
 The original mod's author and license remain unchanged.
 
 The original parent-process click hook never saw clicks consumed by a website's

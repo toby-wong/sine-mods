@@ -1,4 +1,4 @@
-// Alt-click Split View settings · Kostiantyn Kugot · 1.4.2
+// Alt-click Split View settings · Kostiantyn Kugot · 1.4.4-local
 (() => {
   window.SplitLinkSettings?.destroy();
   const enabledPref = 'uc.alt-click-split-view.enabled';
@@ -17,7 +17,7 @@
     trigger.value = Services.prefs.getStringPref(triggerPref, 'alt');
     trigger.disabled = !enabled.checked;
     const conflict = enabled.checked && Services.prefs.getBoolPref(glanceEnabledPref, true) &&
-      trigger.value === Services.prefs.getStringPref(glanceTriggerPref, 'alt');
+      trigger.value === Services.prefs.getStringPref(glanceTriggerPref, 'ctrl');
     trigger.setAttribute('aria-invalid', String(conflict));
     trigger.setCustomValidity(conflict ? 'This modifier is already used by Glance.' : '');
     error.hidden = !conflict;
@@ -52,8 +52,10 @@
       triggerLabel.htmlFor = 'split-link-trigger';
       trigger = html('select');
       trigger.id = 'split-link-trigger';
-      const altLabel = Services.appinfo.OS === 'Darwin' ? 'Option' : 'Alt';
-      for (const [value, label] of [['ctrl', 'Ctrl'], ['alt', altLabel], ['shift', 'Shift'], ['meta', 'Meta (Command)']]) {
+      const isMac = Services.appinfo.OS === 'Darwin';
+      const altLabel = isMac ? 'Option' : 'Alt';
+      const metaLabel = isMac ? 'Command' : 'Meta (Windows / Super)';
+      for (const [value, label] of [['ctrl', 'Ctrl'], ['alt', altLabel], ['shift', 'Shift'], ['meta', metaLabel]]) {
         const option = html('option');
         option.value = value;
         option.textContent = label + ' + Click';

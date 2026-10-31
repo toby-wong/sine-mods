@@ -10,7 +10,7 @@ through [Sine](https://github.com/CosmoCreeper/Sine).
 | [Little Zen](little-zen/) | 0.1.0 | Opens a compact temporary browsing window. **Open in Space** moves the live page into a normal window, preserving its state and container. |
 | [Auto Glance](auto-glance/) | 0.2.2 | Opens website-created tabs as Glance previews, keeps Mac Command-click as a normal background tab, and repairs interrupted Glance layout. |
 | [Tree Tabs Prototype](tree-tabs-prototype/) | 0.1.1 | Adds collapsible parent/child relationships to ordinary tabs. Moving a parent carries its descendants, including moves between Spaces. |
-| [Alt-click Split View — local fork](alt-click-split-view/) | 1.4.3-local | Opens Option/Alt-clicked links beside the current page while preserving the original document. Includes fixes for website routers, frames, Glance, pinned tabs, and Essentials. Based on Kostiantyn Kugot's mod. |
+| [Alt-click Split View — local fork](alt-click-split-view/) | 1.4.4-local | Opens Option/Alt-clicked links beside the current page while preserving the original document. Includes fixes for website routers, frames, Glance, pinned tabs, and Essentials. Based on Kostiantyn Kugot's mod. |
 
 All four projects are Sine mods. Other third-party mods from the original
 browser setup are not included.
@@ -36,6 +36,8 @@ browser behavior has **not** been tested.
   excluded. The experimental split-session tree support was reverted. Use
   **right-click a tab → Tree tabs** to nest or outdent deliberately.
 - **Split View:** **Option-click** on Mac / **Alt-click** on Windows is the default.
+  It uses each platform's native tab accelerator internally. Windows and Linux
+  routing have automated coverage; live browser checks have run on macOS.
   Choose a different modifier in the mod's settings if it conflicts with Glance.
   The optional Hammerspoon background-window click guard is Mac-only.
 

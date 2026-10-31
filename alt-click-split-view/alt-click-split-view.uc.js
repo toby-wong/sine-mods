@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Alt-click Split View
 // @author         Kostiantyn Kugot
-// @version        1.4.3-local
+// @version        1.4.4-local
 // @description    Open Alt-clicked links in Zen Split View.
 // @include        chrome://browser/content/browser.xhtml
 // ==/UserScript==
@@ -232,7 +232,7 @@
       if (!enabled() || !shouldSplitLinkClick(data, trigger())) return false;
       // Glance owns the gesture in the content process; never race its action.
       if (Services.prefs.getBoolPref('zen.glance.enabled', true) &&
-          Services.prefs.getStringPref('zen.glance.activation-method', 'alt') === trigger()) return false;
+          Services.prefs.getStringPref('zen.glance.activation-method', 'ctrl') === trigger()) return false;
       const win = browser?.documentGlobal;
       const sourceTab = win?.gBrowser.getTabForBrowser(browser);
       if (!win || !sourceTab || typeof win.openLinkIn !== 'function' ||
@@ -260,11 +260,14 @@
         };
         win.openLinkIn = hookedOpenLinkIn;
         try {
+          // Ask the native click handler for a tab using this platform's
+          // accelerator, without also synthesizing an unrelated modifier.
+          const isMac = Services.appinfo.OS === 'Darwin';
           state.original.call(_actor, {
             ...data,
             altKey: false,
-            ctrlKey: true,
-            metaKey: true,
+            ctrlKey: !isMac,
+            metaKey: isMac,
             shiftKey: false,
           });
         } finally {
@@ -309,7 +312,7 @@
   }
 
   const unload = () => destroy({ reloading: true });
-  const api = { version: '1.4.3-local', status: 'starting', destroy };
+  const api = { version: '1.4.4-local', status: 'starting', destroy };
   window.AltClickSplitView = api;
   for (const pref of [ENABLED_PREF, TRIGGER_PREF, HOVER_PREF]) {
     Services.prefs.setBoolPref(`services.sync.prefs.sync.${pref}`, false);

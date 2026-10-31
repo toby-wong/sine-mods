@@ -41,7 +41,7 @@
         "value": "shift"
       },
       {
-        "label": "Meta (Command) + Click",
+        "label": "Meta (Windows / Super) + Click",
         "value": "meta"
       }
     ],
@@ -68,7 +68,7 @@
         "value": "shift"
       },
       {
-        "label": "Meta (Command) + Click",
+        "label": "Command + Click",
         "value": "meta"
       }
     ],

@@ -2,7 +2,7 @@
 
 ## Current status
 
-- Source baseline: **1.4.3-local**, a fork of Kostiantyn Kugot's **1.4.2** mod.
+- Source baseline: **1.4.4-local**, a fork of Kostiantyn Kugot's **1.4.2** mod.
   Preserve the upstream author and [MIT license](LICENSE).
 - A capturing content actor handles routed links and frames before page handlers.
   Option/Alt-click opens a native split while preserving the original document.
@@ -10,9 +10,12 @@
   reused, with temporary pin state restored when the managed split is separated.
 - Hover-based pane focus is optional. A separate optional Hammerspoon guard
   preserves Option-click when focusing a background Zen/Arc window.
-- The implementation offers configurable modifiers, but browser evidence is from
-  macOS. Windows Alt-click behavior has not been validated. See
+- Parent-hook tests cover Windows, macOS, and Linux tab accelerators and Glance
+  conflicts. Live browser evidence is from macOS on Zen 1.24b; Windows desktop
+  input has not been validated. See
   [PATCH-NOTES.md](PATCH-NOTES.md) and [VERIFICATION.md](VERIFICATION.md).
+- Current validation: 8 Node tests, 15 live split cases, 25 Auto Glance checks,
+  plus unload and restart restoration checks passed in a disposable profile.
 
 ## Implementation constraints
 
@@ -21,6 +24,9 @@
   disables automatic updates so upstream cannot silently replace the fixes.
 - Keep the actor (`AltClickSplitViewChild.sys.mjs`), parent click hook, and
   preferences (`settings.uc.js` / `preferences.json`) in agreement.
+- An unset `zen.glance.activation-method` falls back to `ctrl` in native Zen and
+  the actor. Use that same fallback in the parent hook and settings. Synthesize
+  only the platform's tab accelerator: Meta on Darwin, Ctrl elsewhere.
 - Continue through Firefox's native link validation and navigation parameters.
   Preserve modifier precedence and coexistence with Auto Glance's click hook.
 - Native pinned/unpinned splitting can duplicate the source. Preserve the patch
@@ -42,8 +48,12 @@ node --test alt-click-split-view/tests/alt-click-split-view.test.cjs
 
 For browser behavior, `alt-click-split-view/tests/regression.py` accepts
 `--profile`, `--port` (default `2832`), `--report`, and repeatable `--case`.
-It requires a separately launched disposable profile with privileged localhost
-debugging, and validates the profile identity before running.
+It requires a separately launched disposable profile with localhost Marionette,
+and validates the profile identity before running. On Zen 1.24b, launch the test
+process with `--marionette` and `MOZ_REMOTE_ALLOW_SYSTEM_ACCESS=1` in its
+environment; set `marionette.port` to the chosen port in that profile. The
+`--allow-system-access` flag alone does not enable privileged access in this
+version. Never enable automation in the everyday profile.
 
 Exercise routed links, frames, Glance, pins/Essentials, the four-pane limit,
 repeated operations, reload/unload, and restart restoration. Assert document and

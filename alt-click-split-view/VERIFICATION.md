@@ -1,4 +1,37 @@
-# Zen split fix — installation record
+# Alt-click Split View verification
+
+## 1.4.4-local — platform compatibility
+
+Eight Node tests passed, including execution of the parent hook against simulated
+Windows, macOS, and Linux native tab-opening behavior. They verify that only the
+platform's tab accelerator is synthesized, native navigation metadata is kept,
+the source tab is reused, and an absent Glance shortcut preference does not
+swallow Alt-click. Glance conflicts and a disabled mod still defer to native
+handling. The accelerator and missing-preference cases failed against
+1.4.3-local before the fix.
+
+Live tests ran in a separate disposable profile on macOS with Zen 1.24b,
+Alt-click Split View 1.4.4-local, and Auto Glance 0.2.2:
+
+- All 15 split regressions passed, covering ordinary and website-controlled
+  links, frames, Glance, pins/Essentials, repeated splits, the four-pane limit,
+  and hot reload. Document identity, drafts, and request counts confirmed that
+  splitting preserved the source page.
+- All 25 Auto Glance integration checks passed, including Command-click
+  background tabs, Glance alignment and blur, POST data, and modified clicks.
+- Unloading preserved both live pages and restored the Essential source.
+  A separate restart check restored a managed split; separating it restored the
+  Essential and destination pin state while keeping the restored documents alive.
+
+The disposable browser was closed, its automation port was closed, and hashes
+confirmed that the everyday profile's installed mod files and registry were
+unchanged. Machine-specific reports are outside Git; their location is recorded
+in the ignored `.local-windows-validation.json`.
+
+Windows and Linux routing were simulated. Native desktop input on those
+platforms has not been tested.
+
+## 1.4.3-local — original macOS installation record
 
 At the original macOS validation, the local Alt-click Split View patch, version
 1.4.3-local, was active in the running Zen profile. The original window's tab

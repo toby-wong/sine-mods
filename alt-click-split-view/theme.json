@@ -1,11 +1,11 @@
 {
   "id": "alt-click-split-view",
   "name": "Alt-click Split View",
-  "description": "Open Option-clicked links in Split View while keeping the original page alive.",
+  "description": "Open Alt/Option-clicked links in Split View while keeping the original page alive.",
   "author": "Kostiantyn Kugot",
-  "version": "1.4.3-local",
+  "version": "1.4.4-local",
   "ai": "yes",
-  "updatedAt": "2026-10-27",
+  "updatedAt": "2026-10-31",
   "tags": [
     "split-view",
     "links",

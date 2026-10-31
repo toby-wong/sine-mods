@@ -3,7 +3,7 @@
 Option-click a web link on macOS, or Alt-click on Windows, to open it beside the
 source page in Zen's native Split View.
 
-This is version **1.4.3-local**, based on **1.4.2** of
+This is version **1.4.4-local**, based on **1.4.2** of
 [Kostiantyn Kugot's Alt-click Split View](https://github.com/kkugot/alt-click-split-view).
 The upstream author and [MIT license](LICENSE) are retained.
 
@@ -11,6 +11,10 @@ The upstream author and [MIT license](LICENSE) are retained.
 
 - Captures Option/Alt-click before a website's router consumes it, including
   links inside frames, while retaining Firefox's normal link validation.
+- Uses the platform's native tab accelerator internally: Ctrl on Windows/Linux
+  and Command on macOS.
+- Matches Zen's native Glance fallback when its shortcut preference is unset,
+  so the default Alt-click is not consumed without opening a split.
 - Promotes an existing Glance preview before splitting beside it.
 - Reuses pinned and Essential source pages instead of loading duplicate pages.
 - Restores temporary pin/Essential state after separating a managed split.
@@ -18,9 +22,10 @@ The upstream author and [MIT license](LICENSE) are retained.
   managed splits without closing or reloading their pages.
 
 See [PATCH-NOTES.md](PATCH-NOTES.md) for details and
-[VERIFICATION.md](VERIFICATION.md) for the original macOS validation record.
-Normal clicks, Command-click, middle-click, and Shift-click retain their own
-handlers; Auto Glance may separately customize some of those actions.
+[VERIFICATION.md](VERIFICATION.md) for validation records.
+With the default Alt trigger, normal clicks, Ctrl/Command-click, middle-click,
+and Shift-click retain their own handlers; Auto Glance may separately customize
+some of those actions.
 
 ## Install on macOS or Windows
 
@@ -40,9 +45,15 @@ Configure the modifier and optional pointer-hover pane switching under
 **Settings → Sine → Alt-click Split View → Configure**. Avoid assigning the same
 modifier to Glance; the mod yields when those shortcuts conflict.
 
-The browser implementation supports selecting Alt, Ctrl, Shift, or Command.
-Browser validation has been on macOS; Windows behavior has not been tested.
-The default Windows gesture is Alt-click.
+The browser implementation supports selecting Alt/Option, Ctrl, Shift, or Meta
+(Command on macOS, Windows/Super elsewhere). The operating system may reserve
+the Meta key. Alt-click is the default Windows gesture and needs no extra helper.
+Only the selected modifier is accepted; combinations such as Ctrl+Alt do not
+trigger a split.
+
+Automated tests exercise Windows, macOS, and Linux click routing, including
+native navigation metadata and Glance conflicts. Live browser validation has
+been on macOS; Windows desktop input has not yet been tested.
 
 ## Optional Mac background-window guard
 
