@@ -43,6 +43,18 @@ windows. Use the Tree tabs menu for deliberate nesting and outdenting.
 
 Collapsing a branch hides sidebar rows; it does not unload web pages.
 
+## Install on macOS or Windows
+
+Follow the collection's [installation guide](../README.md#install-the-sine-mods).
+Use the Tree Tabs subfolder URL in Sine, or the shared local installer with
+`--mods tree-tabs-prototype`. Restart Zen afterward.
+
+Browser testing has been on macOS. Tree creation follows native opener
+relationships, not a specific keyboard modifier. If Auto Glance converts a link
+into a preview, that preview is excluded from the tree. Auto Glance's explicit
+background-tab override is currently Mac Command-click only; Windows Ctrl-click
+does not have that override.
+
 ## Settings and undo
 
 Open **Zen Settings → Sine → Tree Tabs Prototype → Configure** to enable or
@@ -56,12 +68,9 @@ The installed files are under the active Zen profile's
 `chrome/sine-mods/tree-tabs-prototype`. The signed Zen.app bundle is unchanged.
 This uses internal Zen APIs and should be retested after significant updates.
 
-The pre-installation backup is:
-
-`/Users/tobywo/Documents/Browser Migration Backups/2026-10-29_110519_Zen-Tree-Tabs-Prototype`
-
-It includes the previous chrome setup, preferences, and session files. The
-`reports` directory contains browser tests, restart verification, and screenshots.
+Original installation backups and browser reports are retained outside this
+repository. The ignored `.local-setup.json`, when present, records their local
+locations. Each run of the shared installer makes a separate backup.
 
 ## Implementation and checks
 

@@ -6,17 +6,28 @@
   "author": "Local",
   "createdAt": "2026-10-29",
   "updatedAt": "2026-10-31",
-  "homepage": "",
-  "fork": ["zen"],
-  "tags": ["tabs", "navigation"],
+  "homepage": "https://github.com/toby-wong/sine-mods/tree/main/tree-tabs-prototype",
+  "fork": [
+    "zen"
+  ],
+  "tags": [
+    "tabs",
+    "navigation"
+  ],
   "ai": "yes",
   "scripts": {
     "tree-tabs.uc.js": {
-      "include": ["chrome://browser/content/browser.xhtml"],
+      "include": [
+        "chrome://browser/content/browser.xhtml"
+      ],
       "loadOrder": 70
     }
   },
-  "style": {"chrome": "", "content": ""},
+  "style": {
+    "chrome": "",
+    "content": ""
+  },
   "preferences": "preferences.json",
-  "supportsUnload": true
+  "supportsUnload": true,
+  "readme": "https://raw.githubusercontent.com/toby-wong/sine-mods/main/tree-tabs-prototype/README.md"
 }

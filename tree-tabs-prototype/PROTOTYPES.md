@@ -10,10 +10,10 @@ recorded, not the original deployment times.
 
 | Tag | Status |
 | --- | --- |
-| `prototype/v0.1.0` | Original prototype: ordinary tabs form trees; splits are excluded. |
-| `prototype/v0.2.0` | Split-session experiment, rolled back after the user reported missing split tabs. |
-| `prototype/v0.1.0-restored` | Restored ordinary-tab prototype, with the split-session change reverted. |
-| `prototype/v0.1.1` | Whole branches follow sidebar moves and moves between Spaces. |
+| `tree-tabs-prototype/prototype/v0.1.0` | Original prototype: ordinary tabs form trees; splits are excluded. |
+| `tree-tabs-prototype/prototype/v0.2.0` | Split-session experiment, rolled back after the user reported missing split tabs. |
+| `tree-tabs-prototype/prototype/v0.1.0-restored` | Restored ordinary-tab prototype, with the split-session change reverted. |
+| `tree-tabs-prototype/prototype/v0.1.1` | Whole branches follow sidebar moves and moves between Spaces. |
 
 The v0.2.0 automated tests and installation checks passed, but did not catch
 the subsequent user-visible problem. Its root cause has not been established.
@@ -36,18 +36,20 @@ and cross-Space moves, with all temporary tabs removed afterward. Existing
 tabs, tree relationships, split layouts, focused pages, selected tab, active
 Space, and Auto Glance state were preserved.
 
-The source and session backup, together with test and live verification
-reports, is:
-
-`/Users/tobywo/Documents/Browser Migration Backups/2026-10-31_162055_Zen-Tree-Branch-Moves`
+The source/session backup and test reports are retained locally outside Git.
+The ignored `.local-setup.json` records the original backup location.
 
 ## Compare versions
 
 ```sh
 git log --oneline --decorate
-git diff prototype/v0.1.0 prototype/v0.2.0 -- tree-tabs.uc.js tree-tabs.css
-git show prototype/v0.2.0:tree-tabs.uc.js
+git diff tree-tabs-prototype/prototype/v0.1.0 tree-tabs-prototype/prototype/v0.2.0 -- tree-tabs.uc.js tree-tabs.css
+git show tree-tabs-prototype/prototype/v0.2.0:tree-tabs.uc.js
 ```
+
+Run these commands from the collection root. The imported tags keep their
+original single-project layout, with `tree-tabs.uc.js` at the root of those
+historical commits. The current source is under `tree-tabs-prototype/`.
 
 ## Future prototypes
 

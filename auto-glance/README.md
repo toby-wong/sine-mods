@@ -48,10 +48,18 @@ container also retain their native handling.
 The mod applies to HTTP/HTTPS destinations. It keeps an existing Glance intact;
 additional links opened from that preview can still use ordinary tabs.
 
-## Local installation
+## Install on macOS or Windows
+
+Follow the collection's [installation guide](../README.md#install-the-sine-mods).
+Use the Auto Glance subfolder URL in Sine, or the shared local installer with
+`--mods auto-glance`. Restart Zen afterward.
+
+Browser testing has been on macOS. The background-tab override checks the
+Command modifier (`metaKey`); it does not currently implement Windows Ctrl-click
+as an override. On Windows, Ctrl-click can still be converted into Glance.
 
 The installed mod lives under `chrome/sine-mods/auto-glance` in the Zen profile.
-Automatic updates are disabled for this local mod.
+The shared local installer disables automatic updates for its installed copy.
 
 Disable or remove **Auto Glance** in Sine to restore the earlier link behavior.
 Existing previews and tabs are preserved when the mod unloads.

@@ -1,0 +1,204 @@
+/* Scoped to Little Zen; ordinary browser windows retain their own layout. */
+:root[little-zen] {
+  --zen-element-separation: 0px !important;
+  --zen-sidebar-width: 100% !important;
+  --zen-sidebar-min-width: 0px !important;
+  min-width: 500px !important;
+}
+
+:root[little-zen] #browser {
+  display: flex !important;
+  flex-direction: column !important;
+  min-width: 0 !important;
+}
+
+:root[little-zen] #navigator-toolbox {
+  position: relative !important;
+  inset: auto !important;
+  display: grid !important;
+  grid-template-columns: auto minmax(180px, 1fr) auto auto !important;
+  align-items: center !important;
+  column-gap: 4px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: auto !important;
+  min-height: 0 !important;
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+  padding: 5px 7px !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  translate: none !important;
+  transform: none !important;
+  transition: none !important;
+  overflow: visible !important;
+}
+
+/* Compact mode moves the native toolbar into #titlebar. Flatten that wrapper
+   instead of hiding it, so either native arrangement uses the same grid. */
+:root[little-zen] #titlebar {
+  display: contents !important;
+  visibility: visible !important;
+}
+
+:root[little-zen] #titlebar > :not(#nav-bar):not(#zen-sidebar-top-buttons),
+:root[little-zen] #toolbar-menubar,
+:root[little-zen] #PersonalToolbar,
+:root[little-zen] #zen-sidebar-foot-buttons,
+:root[little-zen] #zen-workspaces-button,
+:root[little-zen] #zen-sidebar-splitter,
+:root[little-zen] #zen-sidebar-web-panel {
+  display: none !important;
+}
+
+:root[little-zen] #zen-sidebar-top-buttons {
+  display: contents !important;
+  visibility: visible !important;
+}
+
+:root[little-zen] #zen-sidebar-top-buttons > .titlebar-buttonbox-container {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  align-self: center !important;
+  margin: 0 5px !important;
+}
+
+:root[little-zen] #zen-sidebar-top-buttons-customization-target {
+  grid-column: 3 !important;
+  grid-row: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  flex: 0 0 auto !important;
+  min-width: 0 !important;
+  width: auto !important;
+  -moz-window-dragging: no-drag !important;
+}
+
+:root[little-zen] #unified-extensions-button,
+:root[little-zen] #PanelUI-button {
+  display: flex !important;
+  position: static !important;
+  opacity: 1 !important;
+  margin: 0 !important;
+  transform: none !important;
+}
+
+:root[little-zen] #zen-sidebar-top-buttons-customization-target > :not(#unified-extensions-button):not(#PanelUI-button),
+:root[little-zen] #nav-bar-overflow-button {
+  display: none !important;
+}
+
+:root[little-zen] #notifications-toolbar {
+  grid-column: 1 / -1 !important;
+  grid-row: 2 !important;
+}
+
+:root[little-zen] #navigator-toolbox {
+  -moz-window-dragging: drag;
+}
+
+:root[little-zen] #little-zen-controls {
+  grid-column: 4 !important;
+  grid-row: 1 !important;
+  display: flex !important;
+  min-width: 0 !important;
+  gap: 4px !important;
+  align-items: center !important;
+}
+
+:root[little-zen] #little-zen-controls toolbarbutton {
+  -moz-window-dragging: no-drag !important;
+  min-height: 30px !important;
+  margin: 0 !important;
+  border-radius: 6px !important;
+  padding: 2px 8px !important;
+  font-size: 12px !important;
+}
+
+:root[little-zen] #little-zen-controls .toolbarbutton-text {
+  display: flex !important;
+}
+
+:root[little-zen] #little-zen-keep-group {
+  border: 1px solid color-mix(in srgb, currentColor 14%, transparent);
+  border-radius: 7px;
+  background: color-mix(in srgb, Canvas 72%, transparent);
+  box-shadow: 0 1px 2px color-mix(in srgb, currentColor 8%, transparent);
+}
+
+:root[little-zen] #little-zen-keep {
+  max-width: 230px !important;
+  border-start-end-radius: 0 !important;
+  border-end-end-radius: 0 !important;
+}
+
+:root[little-zen] #little-zen-keep .toolbarbutton-icon,
+:root[little-zen] #little-zen-choose-space .toolbarbutton-icon {
+  display: none !important;
+}
+
+:root[little-zen] #little-zen-keep .toolbarbutton-text {
+  min-width: 0;
+  overflow: hidden;
+}
+
+:root[little-zen] #little-zen-keep-shortcut {
+  margin: 0 0 0 6px;
+  padding: 0 3px;
+  border-radius: 3px;
+  opacity: 0.65;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+:root[little-zen] #little-zen-choose-space {
+  border-inline-start: 1px solid color-mix(in srgb, currentColor 12%, transparent) !important;
+  border-start-start-radius: 0 !important;
+  border-end-start-radius: 0 !important;
+  padding-inline: 7px !important;
+}
+
+:root[little-zen] #nav-bar {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  flex: 0 0 auto !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  -moz-window-dragging: no-drag !important;
+}
+
+:root[little-zen] #nav-bar-customization-target,
+:root[little-zen] #urlbar-container {
+  min-width: 0 !important;
+  flex: 1 !important;
+}
+
+:root[little-zen] #zen-appcontent-wrapper {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  flex: 1 1 0% !important;
+  margin: 0 !important;
+}
+
+:root[little-zen] #tabbrowser-tabbox {
+  min-height: 0 !important;
+  margin: 0 !important;
+}
+
+@media (max-width: 650px) {
+  :root[little-zen] #little-zen-keep-shortcut,
+  :root[little-zen] #PanelUI-button {
+    display: none !important;
+  }
+  :root[little-zen] #little-zen-keep {
+    max-width: 160px !important;
+  }
+}
+
+:root:not([little-zen]) #little-zen-controls {
+  display: none !important;
+}

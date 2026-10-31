@@ -1,0 +1,33 @@
+{
+  "id": "little-zen",
+  "name": "Little Zen",
+  "description": "A compact temporary window for quick searches and links. Keep a page with Open in Space.",
+  "version": "0.1.0",
+  "author": "Local",
+  "createdAt": "2026-10-26",
+  "updatedAt": "2026-10-26",
+  "homepage": "https://github.com/toby-wong/sine-mods/tree/main/little-zen",
+  "fork": [
+    "zen"
+  ],
+  "tags": [
+    "windows",
+    "navigation"
+  ],
+  "ai": "yes",
+  "scripts": {
+    "little-zen.uc.js": {
+      "include": [
+        "chrome://browser/content/browser.xhtml"
+      ],
+      "loadOrder": 50
+    }
+  },
+  "style": {
+    "chrome": "chrome.css",
+    "content": ""
+  },
+  "preferences": "preferences.json",
+  "supportsUnload": true,
+  "readme": "https://raw.githubusercontent.com/toby-wong/sine-mods/main/little-zen/README.md"
+}

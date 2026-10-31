@@ -6,17 +6,27 @@
   "author": "Local",
   "createdAt": "2026-10-26",
   "updatedAt": "2026-10-29",
-  "homepage": "",
-  "fork": ["zen"],
-  "tags": ["navigation"],
+  "homepage": "https://github.com/toby-wong/sine-mods/tree/main/auto-glance",
+  "fork": [
+    "zen"
+  ],
+  "tags": [
+    "navigation"
+  ],
   "ai": "yes",
   "scripts": {
     "auto-glance.uc.js": {
-      "include": ["chrome://browser/content/browser.xhtml"],
+      "include": [
+        "chrome://browser/content/browser.xhtml"
+      ],
       "loadOrder": 60
     }
   },
-  "style": {"chrome": "", "content": ""},
+  "style": {
+    "chrome": "",
+    "content": ""
+  },
   "preferences": "preferences.json",
-  "supportsUnload": true
+  "supportsUnload": true,
+  "readme": "https://raw.githubusercontent.com/toby-wong/sine-mods/main/auto-glance/README.md"
 }

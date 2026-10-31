@@ -1,0 +1,46 @@
+[
+  {
+    "type": "text",
+    "label": "Little Zen",
+    "size": "20px",
+    "margin": "12px 0"
+  },
+  {
+    "type": "text",
+    "label": "Open a temporary window with Command+Option+N or File → New Little Zen. Use Open in Space to keep a page.",
+    "size": "14px"
+  },
+  {
+    "property": "uc.little-zen.enabled",
+    "label": "Enable Little Zen",
+    "type": "checkbox",
+    "defaultValue": true
+  },
+  {
+    "property": "uc.little-zen.external-links",
+    "label": "Open links from other apps in Little Zen",
+    "type": "checkbox",
+    "defaultValue": false
+  },
+  {
+    "type": "text",
+    "label": "External routing applies to web links opened in Zen. The window inherits the current Space's container. Space routing applies when you keep the page in a Space.",
+    "size": "13px"
+  },
+  {
+    "property": "uc.little-zen.window-size",
+    "label": "New window size",
+    "type": "dropdown",
+    "defaultValue": "medium",
+    "options": [
+      {"label": "Small — 720 × 560", "value": "small"},
+      {"label": "Medium — 900 × 680", "value": "medium"},
+      {"label": "Large — 1100 × 800", "value": "large"}
+    ]
+  },
+  {
+    "type": "text",
+    "label": "Closing a temporary window discards its open tabs, as with Zen's blank windows. Normal browsing history still applies. Private windows remain private.",
+    "size": "13px"
+  }
+]
