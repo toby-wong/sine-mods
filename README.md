@@ -11,8 +11,10 @@ through [Sine](https://github.com/CosmoCreeper/Sine).
 | [Auto Glance](auto-glance/) | 0.2.2 | Opens website-created tabs as Glance previews, keeps Mac Command-click as a normal background tab, and repairs interrupted Glance layout. |
 | [Tree Tabs Prototype](tree-tabs-prototype/) | 0.1.1 | Adds collapsible parent/child relationships to ordinary tabs. Moving a parent carries its descendants, including moves between Spaces. |
 | [Alt-click Split View — local fork](alt-click-split-view/) | 1.4.4-local | Opens Option/Alt-clicked links beside the current page while preserving the original document. Includes fixes for website routers, frames, Glance, pinned tabs, and Essentials. Based on Kostiantyn Kugot's mod. |
+| [Keyword Tab Search](keyword-tab-search/) | 0.1.0 | Activates an existing search keyword with Tab, including `keyword` for a saved `@keyword` alias, then uses native search mode. |
+| [Find Bar Pane Fix](findbar-pane-fix/) | 0.1.0 | Keeps Cmd/Ctrl+F inside its own page pane with an opaque background and wrapping controls in narrow splits. |
 
-All four projects are Sine mods. Other third-party mods from the original
+All included projects are Sine mods. Other third-party mods from the original
 browser setup are not included.
 
 ### Behavior and platform support
@@ -40,6 +42,12 @@ browser behavior has **not** been tested.
   routing have automated coverage; live browser checks have run on macOS.
   Choose a different modifier in the mod's settings if it conflicts with Glance.
   The optional Hammerspoon background-window click guard is Mac-only.
+- **Keyword Tab Search:** type an existing search keyword, press **Tab**, type
+  your query, and press **Enter**. The same plain Tab gesture works on both
+  platforms. Unrecognized text and normal Tab navigation are preserved.
+- **Find Bar Pane Fix:** use **Command+F** on Mac or **Ctrl+F** on Windows.
+  Works alongside Better Find Bar and keeps each find bar within its owning
+  page, including split panes and Glance previews.
 
 ## Install the Sine mods
 
@@ -50,9 +58,10 @@ browser behavior has **not** been tested.
    [official installation instructions](https://github.com/sineorg/docs/blob/main/src/installation.md)
    and the appropriate [release installer](https://github.com/CosmoCreeper/Sine/releases/latest).
    If **Settings → Sine** already appears, keep your existing installation.
-3. These are custom JavaScript mods. In `about:config`, set
+3. For mods that include custom JavaScript, set the `about:config` preference
    `sine.allow-unsafe-js` to `true` to allow Sine to load them. This preference
-   applies to other custom Sine JavaScript mods too.
+   applies to other custom Sine JavaScript mods too. Find Bar Pane Fix is
+   CSS-only and does not require it.
 4. Keep Zen's native Glance and Split View features enabled for the corresponding
    mods. Their preferences are under **Settings → Sine → [mod] → Configure**.
 
@@ -67,6 +76,8 @@ installation field:
 | Auto Glance | `https://github.com/toby-wong/sine-mods/tree/main/auto-glance` |
 | Tree Tabs Prototype | `https://github.com/toby-wong/sine-mods/tree/main/tree-tabs-prototype` |
 | Alt-click Split View — local fork | `https://github.com/toby-wong/sine-mods/tree/main/alt-click-split-view` |
+| Keyword Tab Search | `https://github.com/toby-wong/sine-mods/tree/main/keyword-tab-search` |
+| Find Bar Pane Fix | `https://github.com/toby-wong/sine-mods/tree/main/findbar-pane-fix` |
 
 Use the same steps on macOS and Windows. Restart Zen after installation.
 The repository root is a collection, not a single installable mod. Use the fork
@@ -107,7 +118,7 @@ py -3 scripts/install.py `
   --backup "$env:USERPROFILE\Desktop\sine-mods-backup-$(Get-Date -Format yyyyMMdd-HHmmss)"
 ```
 
-The default installs all four Sine mods. To choose a subset, append, for example:
+The default installs all included Sine mods. To choose a subset, append, for example:
 
 ```text
 --mods auto-glance tree-tabs-prototype
@@ -176,10 +187,13 @@ validation requirements, and proposed future directions:
 - [Auto Glance](auto-glance/AGENTS.md)
 - [Tree Tabs Prototype](tree-tabs-prototype/AGENTS.md)
 - [Alt-click Split View](alt-click-split-view/AGENTS.md)
+- [Keyword Tab Search](keyword-tab-search/AGENTS.md)
+- [Find Bar Pane Fix](findbar-pane-fix/AGENTS.md)
 
 ```sh
 python3 -m unittest discover -s tests -v
 node --test alt-click-split-view/tests/alt-click-split-view.test.cjs
+node --test keyword-tab-search/tests/keyword-tab-search.test.cjs
 ```
 
 The browser integration scripts inside the mod directories require a separately
@@ -205,7 +219,8 @@ browser; install the chosen files separately.
 
 ## Credits
 
-Little Zen, Auto Glance, and Tree Tabs Prototype are local customizations
+Little Zen, Auto Glance, Tree Tabs Prototype, Keyword Tab Search, and Find Bar
+Pane Fix are local customizations
 created for this collection. Tree Tabs' scope was informed by
 [Zen Bonsai](https://github.com/joegoldin/zen-bonsai-browser).
 

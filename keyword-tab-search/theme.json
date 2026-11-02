@@ -1,0 +1,23 @@
+{
+  "id": "keyword-tab-search",
+  "name": "Keyword Tab Search",
+  "description": "Type a saved search keyword and press Tab to activate its engine.",
+  "version": "0.1.0",
+  "author": "Toby Wong",
+  "createdAt": "2026-11-02",
+  "updatedAt": "2026-11-02",
+  "homepage": "https://github.com/toby-wong/sine-mods/tree/main/keyword-tab-search",
+  "readme": "https://raw.githubusercontent.com/toby-wong/sine-mods/main/keyword-tab-search/README.md",
+  "fork": ["zen"],
+  "tags": ["search", "navigation", "keyboard"],
+  "ai": "yes",
+  "scripts": {
+    "keyword-tab-search.uc.js": {
+      "include": ["chrome://browser/content/browser.xhtml"],
+      "loadOrder": 80
+    }
+  },
+  "style": {"chrome": "", "content": ""},
+  "preferences": "preferences.json",
+  "supportsUnload": true
+}

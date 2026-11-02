@@ -1,0 +1,13 @@
+[
+  {
+    "property": "uc.keyword-tab-search.enabled",
+    "label": "Activate search keywords with Tab",
+    "type": "checkbox",
+    "defaultValue": true
+  },
+  {
+    "type": "text",
+    "label": "Type a saved keyword in the address bar, press Tab, then enter your search. Shift+Tab and unrecognized text keep their normal behavior.",
+    "size": "14px"
+  }
+]

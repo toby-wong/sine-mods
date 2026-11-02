@@ -26,6 +26,8 @@ MOD_FILES = {
         "alt-click-split-view.uc.js", "settings.uc.js",
         "AltClickSplitViewChild.sys.mjs", "LICENSE",
     ),
+    "keyword-tab-search": COMMON + ("keyword-tab-search.uc.js",),
+    "findbar-pane-fix": COMMON + ("findbar.css",),
 }
 
 
@@ -70,7 +72,7 @@ def install(profile, backup, selected, dry_run=False):
     backup = Path(backup).expanduser().resolve()
     selected = list(dict.fromkeys(selected))
     if not selected or any(mod_id not in MOD_FILES for mod_id in selected):
-        raise ValueError("Select at least one of the four supported Sine mods.")
+        raise ValueError("Select at least one supported Sine mod.")
     if backup.is_relative_to(profile) or backup.is_relative_to(ROOT):
         raise ValueError("Choose a new backup directory outside the profile and checkout.")
     mods = profile / "chrome" / "sine-mods"
