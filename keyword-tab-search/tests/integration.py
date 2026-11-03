@@ -77,7 +77,14 @@ def run(args):
         actual = m.js('return Services.dirsvc.get("ProfD",Ci.nsIFile).path;')
         if Path(actual).resolve() != args.profile.resolve() or "test-profile" not in args.profile.name:
             raise RuntimeError("Refusing to test an everyday browser profile")
-        main = m.command("WebDriver:GetWindowHandle")
+        main = None
+        for handle in m.command("WebDriver:GetWindowHandles"):
+            m.command("WebDriver:SwitchToWindow", {"handle": handle})
+            if m.js("return !window._littleZenInfo && !PrivateBrowsingUtils.isWindowPrivate(window);"):
+                main = handle
+                break
+        assert main, "No regular test window"
+        main_context = m.js("return window.browsingContext.id;")
         m.async_js("""
           await KeywordTabSearch.ready;
           const {SearchService}=ChromeUtils.importESModule("moz-src:///toolkit/components/search/SearchService.sys.mjs");
@@ -109,6 +116,38 @@ def run(args):
         check("stripped_token_alias", activate("kwtoken", "Token keyword test"))
         type_keyword("kwtest ")
         check("native_space_keyword", wait("gURLBar.searchMode?.engineName==='Keyword test'"))
+
+        # Settings replaces a child about:blank document. Its unload used to
+        # reach the chrome window's capture listener and destroy this mod.
+        m.js("""
+          window.__keywordLife=KeywordTabSearch;
+          window.__keywordSource=gBrowser.selectedTab;
+          window.__keywordSettings=gBrowser.addTrustedTab("about:preferences#sineMods",{skipRoute:true});
+          gBrowser.selectedTab=__keywordSettings;
+          return true;
+        """)
+        wait("__keywordSettings.linkedBrowser.contentDocument?.querySelector('#sineModsList')")
+        m.js("gBrowser.selectedTab=__keywordSource;return true;")
+        check("settings_open_preserves_keyword", m.js(
+            "return window.KeywordTabSearch===__keywordLife && __keywordLife.status==='ready';"
+        ) and activate("kwtest"))
+
+        m.js("""
+          window.__keywordSettingsDocument=__keywordSettings.linkedBrowser.browsingContext.currentWindowGlobal.innerWindowId;
+          __keywordSettings.linkedBrowser.reload();
+          return true;
+        """)
+        wait("__keywordSettings.linkedBrowser.browsingContext.currentWindowGlobal.innerWindowId!==__keywordSettingsDocument && "
+             "__keywordSettings.linkedBrowser.contentDocument?.querySelector('#sineModsList')")
+        check("settings_reload_preserves_keyword", m.js(
+            "return window.KeywordTabSearch===__keywordLife && __keywordLife.status==='ready';"
+        ) and activate("kwtest"))
+
+        m.js("gBrowser.removeTab(__keywordSettings,{animate:false});return true;")
+        wait("!__keywordSettings.isConnected")
+        check("settings_close_preserves_keyword", m.js(
+            "return window.KeywordTabSearch===__keywordLife && __keywordLife.status==='ready';"
+        ) and activate("kwtest"))
 
         type_keyword("zz-no-such-keyword")
         key("\ue004")
@@ -166,8 +205,20 @@ def run(args):
         m.command("WebDriver:SwitchToWindow", {"handle": mini})
         wait("window.KeywordTabSearch?.status==='ready'")
         check("little_zen_keyword_tab", activate("kwnew"))
+        m.js("""
+          const main=[...Services.wm.getEnumerator("navigator:browser")]
+            .find(win=>win.browsingContext.id===arguments[0]);
+          main.__closedKeywordProbe=KeywordTabSearch;
+          return true;
+        """, [main_context])
+        # Little Zen may replace its initial empty tab while search mode opens.
+        # Rebind Marionette to the window's current browsing context before close.
+        m.command("WebDriver:SwitchToWindow", {"handle": mini})
         m.command("WebDriver:CloseWindow")
         m.command("WebDriver:SwitchToWindow", {"handle": main})
+        check("browser_window_unload_cleans_up", wait("__closedKeywordProbe.status==='destroyed'"))
+        m.js("delete window.__closedKeywordProbe;return true;")
+        check("other_window_close_preserves_keyword", activate("kwnew"))
 
         m.js("KeywordTabSearch.destroy();return true;")
         type_keyword("kwnew")

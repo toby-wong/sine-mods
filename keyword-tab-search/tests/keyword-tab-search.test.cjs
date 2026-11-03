@@ -34,14 +34,22 @@ test("only a whole keyword at the end or a genuine selected autofill suffix matc
 
 async function fixture() {
   const listeners = new Map();
+  const captures = new Map();
   const searches = [];
   let engines = [engine("Crux", "cr")], enabled = true, observer;
   const inputBar = { ...bar("cr"), focused: true, view: {},
     search: (...args) => searches.push(args) };
   const win = {
-    gURLBar: inputBar, console, queueMicrotask,
-    addEventListener: (type, fn) => listeners.set(type, fn),
-    removeEventListener: type => listeners.delete(type),
+    gURLBar: inputBar, console, queueMicrotask, document: {},
+    addEventListener: (type, fn, capture) => {
+      listeners.set(type, fn);
+      captures.set(type, capture);
+    },
+    removeEventListener: (type, _fn, capture) => {
+      assert.equal(capture, captures.get(type));
+      listeners.delete(type);
+      captures.delete(type);
+    },
   };
   const api = createController(win, {
     getEngines: async () => engines,
@@ -53,7 +61,7 @@ async function fixture() {
   });
   await api.ready;
   return {
-    api, inputBar, listeners, searches,
+    api, inputBar, listeners, searches, win, captures,
     setEnabled: value => { enabled = value; },
     async setEngines(value) {
       engines = value;
@@ -117,4 +125,19 @@ test("engine edits invalidate stale aliases; unload removes listeners and observ
   f.api.destroy();
   assert.equal(f.listeners.size, 0);
   assert.equal(f.api.status, "destroyed");
+});
+
+test("child-page unloads preserve the shortcut; owning window unload cleans up", async t => {
+  for (const target of ["document", "window"]) {
+    const f = await fixture();
+    t.after(f.api.destroy);
+    assert.equal(f.captures.get("unload"), false);
+    const unload = f.listeners.get("unload");
+    unload({ target: { documentURI: "about:blank" } });
+    assert.equal(f.api.status, "ready");
+    assert.equal(f.tab().defaultPrevented, true);
+    unload({ target: target === "document" ? f.win.document : f.win });
+    assert.equal(f.api.status, "destroyed");
+    assert.equal(f.listeners.size, 0);
+  }
 });

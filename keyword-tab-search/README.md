@@ -7,7 +7,7 @@ your query and press **Enter**. For example, a saved `cr` keyword becomes:
 cr → Tab → search terms → Enter
 ```
 
-Version **0.1.0** uses Zen's native search mode. It reads your existing visible
+Version **0.1.1** uses Zen's native search mode. It reads your existing visible
 engines and aliases, including plain versions of built-in `@` aliases. It does
 not change engine definitions or construct replacement search URLs.
 
@@ -19,6 +19,9 @@ Tab, text composition, and Tab in page forms retain their normal behavior.
 Engine additions, removals, and keyword changes refresh automatically. Disable
 the mod in Sine to remove the behavior. Ordinary keyword-plus-Space searching
 continues to use Zen's native handling.
+
+Opening, reloading, or closing Settings and other child pages keeps the shortcut
+active. Cleanup runs when the browser window closes or the mod is disabled.
 
 ## Install on macOS or Windows
 

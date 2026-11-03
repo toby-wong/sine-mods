@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name           Keyword Tab Search
-// @version        0.1.0
+// @version        0.1.1
 // @description    Activate a saved search keyword with Tab.
 // @include        chrome://browser/content/browser.xhtml
 // ==/UserScript==
 
 (() => {
   "use strict";
-  const VERSION = "0.1.0";
+  const VERSION = "0.1.1";
   const PREF = "uc.keyword-tab-search.enabled";
   const TOPIC = "browser-search-engine-modified";
   const normalize = value => value.toLocaleLowerCase();
@@ -114,15 +114,21 @@
       generation++;
       index.clear();
       observers.removeObserver(observer, TOPIC);
-      for (const [type, handler] of events) win.removeEventListener(type, handler, true);
+      for (const [type, handler, capture] of events) win.removeEventListener(type, handler, capture);
       api.status = "destroyed";
       if (win.KeywordTabSearch === api) delete win.KeywordTabSearch;
     }
+    const windowUnload = event => {
+      // Chrome can receive captured unloads from child documents, including
+      // the about:blank document replaced when Settings opens.
+      if (event.target === win || event.target === win.document) destroy();
+    };
     const events = [
-      ["keydown", keydown], ["compositionstart", compositionStart],
-      ["compositionend", compositionEnd], ["blur", compositionEnd], ["unload", destroy],
+      ["keydown", keydown, true], ["compositionstart", compositionStart, true],
+      ["compositionend", compositionEnd, true], ["blur", compositionEnd, true],
+      ["unload", windowUnload, false],
     ];
-    for (const [type, handler] of events) win.addEventListener(type, handler, true);
+    for (const [type, handler, capture] of events) win.addEventListener(type, handler, capture);
     observers.addObserver(observer, TOPIC);
     api.ready = refresh();
     return api;

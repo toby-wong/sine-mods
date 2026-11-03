@@ -11,7 +11,7 @@ through [Sine](https://github.com/CosmoCreeper/Sine).
 | [Auto Glance](auto-glance/) | 0.2.3 | Opens website-created tabs as Glance previews, keeps Mac Command-click as a normal background tab, and adds configurable Space-coloured backdrop opacity. |
 | [Tree Tabs Prototype](tree-tabs-prototype/) | 0.1.1 | Adds collapsible parent/child relationships to ordinary tabs. Moving a parent carries its descendants, including moves between Spaces. |
 | [Alt-click Split View — local fork](alt-click-split-view/) | 1.4.4-local | Opens Option/Alt-clicked links beside the current page while preserving the original document. Includes fixes for website routers, frames, Glance, pinned tabs, and Essentials. Based on Kostiantyn Kugot's mod. |
-| [Keyword Tab Search](keyword-tab-search/) | 0.1.0 | Activates an existing search keyword with Tab, including `keyword` for a saved `@keyword` alias, then uses native search mode. |
+| [Keyword Tab Search](keyword-tab-search/) | 0.1.1 | Activates an existing search keyword with Tab, including `keyword` for a saved `@keyword` alias, then uses native search mode. |
 | [Find Bar Pane Fix](findbar-pane-fix/) | 0.1.4 | Keeps Cmd/Ctrl+F inside its pane, with configurable styling and optional scaling with page zoom. |
 | [Ctrl Tab Theme](ctrl-tab-theme/) | 0.1.0 | Matches the native Ctrl+Tab switcher to Space colours, with rounded previews, readable titles, and a clear selection outline. |
 
