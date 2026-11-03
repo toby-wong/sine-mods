@@ -12,7 +12,7 @@ through [Sine](https://github.com/CosmoCreeper/Sine).
 | [Tree Tabs Prototype](tree-tabs-prototype/) | 0.1.1 | Adds collapsible parent/child relationships to ordinary tabs. Moving a parent carries its descendants, including moves between Spaces. |
 | [Alt-click Split View — local fork](alt-click-split-view/) | 1.4.4-local | Opens Option/Alt-clicked links beside the current page while preserving the original document. Includes fixes for website routers, frames, Glance, pinned tabs, and Essentials. Based on Kostiantyn Kugot's mod. |
 | [Keyword Tab Search](keyword-tab-search/) | 0.1.0 | Activates an existing search keyword with Tab, including `keyword` for a saved `@keyword` alias, then uses native search mode. |
-| [Find Bar Pane Fix](findbar-pane-fix/) | 0.1.2 | Keeps Cmd/Ctrl+F inside its pane with larger text, reduced transparency, and automatic black/white contrast. |
+| [Find Bar Pane Fix](findbar-pane-fix/) | 0.1.3 | Keeps Cmd/Ctrl+F inside its pane, with opacity, text size, blur, and colours configurable in Sine. |
 
 All included projects are Sine mods. Other third-party mods from the original
 browser setup are not included.
@@ -47,7 +47,8 @@ browser behavior has **not** been tested.
   platforms. Unrecognized text and normal Tab navigation are preserved.
 - **Find Bar Pane Fix:** use **Command+F** on Mac or **Ctrl+F** on Windows.
   Works alongside Better Find Bar and keeps each find bar within its owning
-  page, including split panes and Glance previews.
+  page, including split panes and Glance previews. Change its appearance in
+  **Settings → Sine → Find Bar Pane Fix → Configure**; changes apply immediately.
 
 ## Install the Sine mods
 

@@ -1,7 +1,86 @@
 [
   {
     "type": "text",
-    "label": "The find bar uses a 96% opaque background, larger text, and automatic black/white contrast. It keeps your theme's background color and blur while fitting inside each page pane. Disable this mod in Sine to restore your previous styling.",
+    "label": "Changes apply immediately. Higher opacity hides more of the page behind the bar. The search field stays solid for readability.",
     "size": "14px"
+  },
+  {
+    "type": "dropdown",
+    "property": "uc.findbar.opacity",
+    "label": "Background opacity",
+    "defaultValue": "96%",
+    "placeholder": false,
+    "processAs": "var",
+    "options": [
+      {"label": "70%", "value": "70%"},
+      {"label": "80%", "value": "80%"},
+      {"label": "85%", "value": "85%"},
+      {"label": "90%", "value": "90%"},
+      {"label": "94%", "value": "94%"},
+      {"label": "96% (default)", "value": "96%"},
+      {"label": "98%", "value": "98%"},
+      {"label": "100% (solid)", "value": "100%"}
+    ]
+  },
+  {
+    "type": "dropdown",
+    "property": "uc.findbar.text-size",
+    "label": "Text size (search text is 1px larger)",
+    "defaultValue": "14px",
+    "placeholder": false,
+    "processAs": "var",
+    "options": [
+      {"label": "12px", "value": "12px"},
+      {"label": "14px (default)", "value": "14px"},
+      {"label": "16px", "value": "16px"},
+      {"label": "18px", "value": "18px"},
+      {"label": "20px", "value": "20px"}
+    ]
+  },
+  {
+    "type": "dropdown",
+    "property": "uc.findbar.blur",
+    "label": "Background blur",
+    "defaultValue": "8px",
+    "placeholder": false,
+    "processAs": "var",
+    "options": [
+      {"label": "Off", "value": "0px"},
+      {"label": "4px", "value": "4px"},
+      {"label": "8px (default)", "value": "8px"},
+      {"label": "12px", "value": "12px"},
+      {"label": "16px", "value": "16px"}
+    ]
+  },
+  {
+    "type": "dropdown",
+    "property": "uc.findbar.text-color",
+    "label": "Text colour",
+    "defaultValue": "auto",
+    "placeholder": false,
+    "options": [
+      {"label": "Automatic contrast (default)", "value": "auto"},
+      {"label": "Always white", "value": "white"},
+      {"label": "Always black", "value": "black"}
+    ]
+  },
+  {
+    "type": "dropdown",
+    "property": "uc.findbar.background",
+    "label": "Background colour",
+    "defaultValue": "theme",
+    "placeholder": false,
+    "options": [
+      {"label": "Use Space / theme colour (default)", "value": "theme"},
+      {"label": "Custom colour", "value": "custom"}
+    ]
+  },
+  {
+    "type": "string",
+    "property": "uc.findbar.custom-background",
+    "label": "Custom background (used with Custom colour)",
+    "defaultValue": "#525f2e",
+    "placeholder": "#525f2e",
+    "border": "value"
   }
 ]

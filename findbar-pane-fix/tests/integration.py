@@ -103,7 +103,7 @@ def run(args):
             inner["y"] >= outer["y"] - 1 and inner["bottom"] <= outer["bottom"] + 1
         )
 
-    def check_layout(name):
+    def check_layout(name, *, opacity=245, size=14, blur=8):
         result = measure()
         report["checks"][name] = result
         assert visible_inside(result["pane"], result["bar"]), (name, result)
@@ -111,17 +111,113 @@ def run(args):
         assert visible_inside(result["bar"], result["close"]), (name, result)
         assert all(visible_inside(result["bar"], control) for control in result["controls"]), (name, result)
         assert result["scrollWidth"] <= result["clientWidth"] + 1, (name, result)
-        assert result["backdropFilter"] == report["baseline"]["backdropFilter"], result
-        assert result["backgroundRGBA"][3] == 245, result  # 96% opacity, rounded to 8 bits.
+        assert result["backdropFilter"] == f"blur({blur}px)", result
+        assert result["backgroundRGBA"][3] == opacity, result
         assert result["color"] in ("rgb(0, 0, 0)", "rgb(255, 255, 255)"), result
         assert result["labelColor"] == result["buttonColor"] == result["color"], result
-        assert result["labelFont"] == "14px" and result["inputFont"] == "15px", result
+        assert result["labelFont"] == f"{size}px" and result["inputFont"] == f"{size + 1}px", result
         assert result["focused"], (name, result)
         print("PASS", name, flush=True)
 
     def screenshot(name):
         image = m.command("WebDriver:TakeScreenshot", {"full": False, "scroll": False})
         args.report.with_name(name + ".png").write_bytes(base64.b64decode(image))
+
+    def check_settings():
+        """Exercise the real Sine Configure controls, not direct preference writes."""
+        mods = args.profile / "chrome/sine-mods"
+        registry = mods / "mods.json"
+        preferences_file = mods / "findbar-pane-fix/preferences.json"
+        original_registry = registry.read_bytes()
+        original_preferences = preferences_file.read_bytes()
+        preferences = json.loads((ROOT / "findbar-pane-fix/preferences.json").read_text())
+        defaults = {pref["property"]: pref["defaultValue"] for pref in preferences if "property" in pref}
+        metadata = json.loads(original_registry)
+        theme = json.loads((ROOT / "findbar-pane-fix/theme.json").read_text())
+        # Keep CSS under this test's explicit load/unload control.
+        metadata[theme["id"]] = {**theme, "enabled": True, "no-updates": True,
+                                 "style": {"chrome": "", "content": ""}}
+        try:
+            preferences_file.write_text(json.dumps(preferences))
+            registry.write_text(json.dumps(metadata))
+            m.async_js("""
+              window.__findSettingsPage=gBrowser.selectedTab;
+              window.__findSettingsDocument=__findSettingsPage.linkedBrowser.browsingContext.currentWindowGlobal.innerWindowId;
+              window.__findSettingsTab=gBrowser.addTrustedTab("about:preferences#sineMods",{skipRoute:true});
+              gBrowser.selectedTab=__findSettingsTab;
+              return true;
+            """)
+            wait("window.__findSettingsTab.linkedBrowser.contentDocument?.querySelector('#uc-findbar-opacity menulist')")
+            m.js("""
+              const doc=__findSettingsTab.linkedBrowser.contentDocument;
+              doc.defaultView.gotoPref("paneSineMods");
+              doc.querySelector('[mod-id="findbar-pane-fix"] .sineItemConfigureButton').click();
+              return true;
+            """)
+            wait("__findSettingsTab.linkedBrowser.contentDocument.querySelector('[mod-id=\"findbar-pane-fix\"] dialog').getBoundingClientRect().height > 0")
+            wait("""(() => {
+              const doc=__findSettingsTab.linkedBrowser.contentDocument;
+              return doc.defaultView.getComputedStyle(doc.querySelector('[mod-id="findbar-pane-fix"] dialog')).opacity === "1";
+            })()""")
+            screenshot("findbar-settings")
+
+            def change(property_name, value, expression):
+                m.js("""
+                  gBrowser.selectedTab=__findSettingsTab;
+                  const doc=__findSettingsTab.linkedBrowser.contentDocument;
+                  const control=doc.getElementById(arguments[0].replaceAll(".","-")).querySelector("menulist,input");
+                  control.value=arguments[1];
+                  control.dispatchEvent(new doc.defaultView.Event(control.localName==="input"?"change":"command",{bubbles:true}));
+                  return true;
+                """, [property_name, value])
+                wait("Services.prefs.getStringPref(" + json.dumps(property_name) + ") === " + json.dumps(value))
+                wait(expression)
+                m.js("gBrowser.selectedTab=__findSettingsPage;__findProbe._findField.focus();return true;")
+
+            change("uc.findbar.opacity", "70%", "getComputedStyle(__findProbe).backgroundColor.includes('0.7')")
+            change("uc.findbar.text-size", "20px", "getComputedStyle(__findProbe).fontSize === '20px'")
+            change("uc.findbar.blur", "0px", "getComputedStyle(__findProbe).backdropFilter === 'blur(0px)'")
+            open_find()
+            check_layout("configured_large_text", opacity=179, size=20, blur=0)
+            m.async_js("await gZenViewSplitter.splitTabs(__findTabs,undefined,1);return true;")
+            open_find()
+            check_layout("configured_narrow_split", opacity=179, size=20, blur=0)
+            screenshot("findbar-configured-narrow")
+
+            change("uc.findbar.text-color", "white", "getComputedStyle(__findProbe).color === 'rgb(255, 255, 255)'")
+            report["checks"]["configured_white"] = measure()["inputColor"] == "rgb(255, 255, 255)"
+            change("uc.findbar.text-color", "black", "getComputedStyle(__findProbe).color === 'rgb(0, 0, 0)'")
+            report["checks"]["configured_black"] = measure()["inputColor"] == "rgb(0, 0, 0)"
+            assert report["checks"]["configured_white"] and report["checks"]["configured_black"]
+
+            change("uc.findbar.background", "custom", "document.querySelector('#theme-Find-Bar-Pane-Fix')?.getAttribute('uc-findbar-background') === 'custom'")
+            change("uc.findbar.custom-background", "#f6efd7", "getComputedStyle(__findProbe).getPropertyValue('--uc-findbar-custom-background').trim() === 'rgb(246, 239, 215)'")
+            change("uc.findbar.text-color", "auto", "getComputedStyle(__findProbe).color === 'rgb(0, 0, 0)'")
+            light = measure()
+            assert all(abs(a - b) <= 1 for a, b in zip(light["backgroundRGBA"][:3], [246, 239, 215])), light
+            report["checks"]["configured_custom_light"] = light["color"]
+            change("uc.findbar.custom-background", "#20242a80", "getComputedStyle(__findProbe).color === 'rgb(255, 255, 255)'")
+            dark = measure()
+            assert dark["backgroundRGBA"][3] == 179, dark
+            report["checks"]["configured_custom_dark"] = dark["color"]
+            change("uc.findbar.custom-background", "not-a-colour", "getComputedStyle(__findProbe).getPropertyValue('--uc-findbar-custom-background').trim() === 'rgb(82, 95, 46)'")
+            report["checks"]["invalid_colour_fallback"] = measure()["color"] == "rgb(255, 255, 255)"
+            assert report["checks"]["invalid_colour_fallback"]
+            for name, value in defaults.items():
+                change(name, value, "document.querySelector('#theme-Find-Bar-Pane-Fix') !== null")
+            wait("getComputedStyle(__findProbe).fontSize === '14px' && getComputedStyle(__findProbe).backgroundColor.includes('0.96')")
+            open_find()
+            check_layout("configured_defaults_restored")
+            report["checks"]["settings_preserve_document"] = m.js("""
+              return __findSettingsPage.linkedBrowser.browsingContext.currentWindowGlobal.innerWindowId === __findSettingsDocument;
+            """)
+            assert report["checks"]["settings_preserve_document"]
+        finally:
+            m.js("for(const [name,value] of Object.entries(arguments[0]))Services.prefs.setStringPref(name,value);return true;", [defaults])
+            m.js("if(window.__findSettingsTab?.isConnected)gBrowser.removeTab(__findSettingsTab);return true;")
+            preferences_file.write_bytes(original_preferences)
+            registry.write_bytes(original_registry)
+            m.async_js('await ChromeUtils.importESModule("chrome://userscripts/content/services/stylesheets.sys.mjs").default.rebuildMods(false);return true;')
 
     try:
         actual = m.js('return Services.dirsvc.get("ProfD",Ci.nsIFile).path;')
@@ -215,6 +311,8 @@ def run(args):
         key("\ue00c")
         m.async_js("await gZenGlanceManager.closeGlance({hasFocused:true,skipPermitUnload:true});return true;")
         open_find()
+
+        check_settings()
 
         m.js("window.windowUtils.removeSheet(window.__findFixURI,window.windowUtils.USER_SHEET);return true;")
         fixed = False

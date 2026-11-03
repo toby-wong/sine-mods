@@ -1,8 +1,8 @@
 {
   "id": "findbar-pane-fix",
   "name": "Find Bar Pane Fix",
-  "description": "Keep the page find bar readable and inside its pane, including split views.",
-  "version": "0.1.2",
+  "description": "A readable, configurable page find bar that stays inside its pane, including split views.",
+  "version": "0.1.3",
   "author": "Toby Wong",
   "createdAt": "2026-11-02",
   "updatedAt": "2026-11-03",

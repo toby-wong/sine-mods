@@ -1,9 +1,17 @@
+/* Reject invalid custom colours without losing the readable background. */
+@property --uc-findbar-custom-background {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #525f2e;
+}
+
 /* Keep each page's find controls inside its own browser pane. */
 :root .browserContainer:has(> findbar) {
   position: relative;
 }
 
 :root .browserContainer > findbar {
+  --uc-findbar-background-source: var(--var-findbar-background-color, var(--zen-colors-primary, Canvas));
   --uc-findbar-surface: Canvas;
   --uc-findbar-ink: CanvasText;
   position: absolute !important;
@@ -28,9 +36,10 @@
   overflow: auto !important;
   border: 1px solid color-mix(in srgb, var(--uc-findbar-ink) 30%, var(--uc-findbar-surface)) !important;
   border-radius: 10px !important;
-  background: color-mix(in srgb, var(--uc-findbar-surface) 96%, transparent) !important;
+  background: color-mix(in srgb, var(--uc-findbar-surface) var(--uc-findbar-opacity, 96%), transparent) !important;
+  backdrop-filter: blur(var(--uc-findbar-blur, 8px)) !important;
   color: var(--uc-findbar-ink) !important;
-  font-size: 14px !important;
+  font-size: var(--uc-findbar-text-size, 14px) !important;
   font-weight: 500 !important;
   line-height: 1.4 !important;
   box-shadow: 0 4px 18px rgb(0 0 0 / 25%) !important;
@@ -41,9 +50,23 @@
    Older engines retain a matching system background/text pair. */
 @supports (color: contrast-color(white)) and (background: rgb(from white r g b / 1)) {
   :root .browserContainer > findbar {
-    --uc-findbar-surface: rgb(from var(--var-findbar-background-color, var(--zen-colors-primary, Canvas)) r g b / 1);
+    --uc-findbar-surface: rgb(from var(--uc-findbar-background-source) r g b / 1);
     --uc-findbar-ink: contrast-color(var(--uc-findbar-surface));
   }
+}
+
+/* Sine exposes dropdown choices as attributes and sizes as CSS variables.
+   All controls work without injecting a script into browser windows. */
+:root:has(#theme-Find-Bar-Pane-Fix[uc-findbar-background="custom"]) .browserContainer > findbar {
+  --uc-findbar-background-source: var(--uc-findbar-custom-background);
+}
+
+:root:has(#theme-Find-Bar-Pane-Fix[uc-findbar-text-color="white"]) .browserContainer > findbar {
+  --uc-findbar-ink: white;
+}
+
+:root:has(#theme-Find-Bar-Pane-Fix[uc-findbar-text-color="black"]) .browserContainer > findbar {
+  --uc-findbar-ink: black;
 }
 
 :root .browserContainer > findbar :is(label, description, checkbox, toolbarbutton) {
@@ -95,10 +118,10 @@
   width: 12rem !important;
   min-width: 0 !important;
   max-width: 100% !important;
-  min-height: 34px !important;
+  min-height: calc(var(--uc-findbar-text-size, 14px) + 20px) !important;
   background: var(--uc-findbar-surface) !important;
   color: var(--uc-findbar-ink) !important;
-  font-size: 15px !important;
+  font-size: calc(var(--uc-findbar-text-size, 14px) + 1px) !important;
   font-weight: 500 !important;
   border: 1px solid color-mix(in srgb, var(--uc-findbar-ink) 45%, var(--uc-findbar-surface)) !important;
 }
