@@ -36,11 +36,26 @@ async function fixture() {
   const listeners = new Map();
   const captures = new Map();
   const searches = [];
+  const submissions = [], splitCloses = [];
+  const result = {};
+  const nativeOpen = function (...args) {
+    submissions.push({ receiver: this, args, closeCount: splitCloses.length });
+    return result;
+  };
+  const parent = Object.create({ openSERP: nativeOpen });
+  const attributes = new Set();
+  const tab = {
+    splitView: true, linkedBrowser: { browserId: 42 },
+    hasAttribute: name => name === "zen-empty-tab",
+  };
   let engines = [engine("Crux", "cr")], enabled = true, observer;
   const inputBar = { ...bar("cr"), focused: true, view: {},
+    parentController: parent, hasAttribute: name => attributes.has(name),
+    _zenHandleUrlbarClose: (...args) => splitCloses.push(args),
     search: (...args) => searches.push(args) };
   const win = {
     gURLBar: inputBar, console, queueMicrotask, document: {},
+    gBrowser: { selectedTab: tab }, gZenViewSplitter: { waitingForSplitTab: false },
     addEventListener: (type, fn, capture) => {
       listeners.set(type, fn);
       captures.set(type, capture);
@@ -62,6 +77,7 @@ async function fixture() {
   await api.ready;
   return {
     api, inputBar, listeners, searches, win, captures,
+    parent, nativeOpen, submissions, splitCloses, result, attributes,
     setEnabled: value => { enabled = value; },
     async setEngines(value) {
       engines = value;
@@ -140,4 +156,60 @@ test("child-page unloads preserve the shortcut; owning window unload cleans up",
     assert.equal(f.api.status, "destroyed");
     assert.equal(f.listeners.size, 0);
   }
+});
+
+test("native search submission completes an empty split without changing its arguments", async t => {
+  const f = await fixture();
+  t.after(f.api.destroy);
+  f.win.gZenViewSplitter.waitingForSplitTab = true;
+  f.attributes.add("zen-newtab");
+  const args = ["engine-id", "a & b/雪?=", "tab", false, 42];
+  assert.equal(f.parent.openSERP(...args), f.result);
+  assert.deepEqual(f.splitCloses, [[true, true]]);
+  assert.deepEqual(f.submissions, [{ receiver: f.parent, args, closeCount: 1 }]);
+});
+
+test("other destinations, tabs, disabled mode, and closed sessions keep native routing", async t => {
+  const cases = [
+    f => { f.win.gZenViewSplitter.waitingForSplitTab = false; },
+    f => { f.win.gBrowser.selectedTab.splitView = false; },
+    f => { f.win.gBrowser.selectedTab.hasAttribute = () => false; },
+    f => { f.attributes.clear(); },
+    f => { f.inputBar._zenHandleUrlbarClose = null; },
+    f => { f.setEnabled(false); },
+    f => { f.args[2] = "current"; },
+    f => { f.args[2] = "window"; },
+    f => { f.args[2] = "tabshifted"; },
+    f => { f.args[3] = true; },
+    f => { f.args[4] = 99; },
+  ];
+  for (const change of cases) {
+    const f = await fixture();
+    t.after(f.api.destroy);
+    f.win.gZenViewSplitter.waitingForSplitTab = true;
+    f.attributes.add("zen-newtab");
+    f.args = ["engine-id", "query", "tab", false, 42];
+    change(f);
+    assert.equal(f.parent.openSERP(...f.args), f.result);
+    assert.equal(f.splitCloses.length, 0);
+    assert.deepEqual(f.submissions[0].args, f.args);
+  }
+});
+
+test("unload restores the native submission method and preserves a later wrapper", async () => {
+  const f = await fixture();
+  assert.notEqual(f.parent.openSERP, f.nativeOpen);
+  f.api.destroy();
+  assert.equal(f.parent.openSERP, f.nativeOpen);
+  assert.equal(Object.hasOwn(f.parent, "openSERP"), false);
+  const second = await fixture();
+  const installed = second.parent.openSERP;
+  const later = (...args) => installed.apply(second.parent, args);
+  second.parent.openSERP = later;
+  second.api.destroy();
+  assert.equal(second.parent.openSERP, later);
+  second.win.gZenViewSplitter.waitingForSplitTab = true;
+  second.attributes.add("zen-newtab");
+  assert.equal(second.parent.openSERP("engine-id", "query", "tab"), second.result);
+  assert.equal(second.splitCloses.length, 0);
 });

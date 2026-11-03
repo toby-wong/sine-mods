@@ -7,7 +7,7 @@ your query and press **Enter**. For example, a saved `cr` keyword becomes:
 cr → Tab → search terms → Enter
 ```
 
-Version **0.1.1** uses Zen's native search mode. It reads your existing visible
+Version **0.1.2** uses Zen's native search mode. It reads your existing visible
 engines and aliases, including plain versions of built-in `@` aliases. It does
 not change engine definitions or construct replacement search URLs.
 
@@ -22,6 +22,13 @@ continues to use Zen's native handling.
 
 Opening, reloading, or closing Settings and other child pages keeps the shortcut
 active. Cleanup runs when the browser window closes or the mod is disabled.
+
+Search also works after Zen's **New Empty Split** command: open the split, type
+your keyword, press **Tab**, type the query, and press **Enter**. The results
+fill the new pane while the original page and its unsaved content stay intact.
+Your configured split shortcut is unchanged. Escape can still cancel the empty
+split, and searching in an existing pane or an ordinary new tab retains its
+normal destination.
 
 ## Install on macOS or Windows
 

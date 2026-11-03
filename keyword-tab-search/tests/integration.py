@@ -48,20 +48,23 @@ def run(args):
         report["checks"][name] = True
         print("PASS", name, flush=True)
 
-    def key(value, shift=False):
-        actions = ([{"type": "keyDown", "value": "\ue008"}] if shift else [])
+    def key(value, shift=False, modifiers=()):
+        held = [*modifiers, *(["\ue008"] if shift else [])]
+        actions = [{"type": "keyDown", "value": modifier} for modifier in held]
         actions += [{"type": "keyDown", "value": value}, {"type": "keyUp", "value": value}]
-        if shift:
-            actions += [{"type": "keyUp", "value": "\ue008"}]
+        actions += [{"type": "keyUp", "value": modifier} for modifier in reversed(held)]
         m.command("WebDriver:PerformActions", {"actions": [{"type": "key", "id": "keyboard", "actions": actions}]})
 
-    def type_keyword(value):
-        m.js("gURLBar.searchMode=null;gURLBar.select();return true;")
+    def type_text(value):
         field = m.command("WebDriver:FindElement", {"using": "css selector", "value": "#urlbar-input"})
         m.command("WebDriver:ElementSendKeys", {
             "id": field["element-6066-11e4-a52e-4f735466cecf"], "text": value,
         })
         return field
+
+    def type_keyword(value):
+        m.js("gURLBar.searchMode=null;gURLBar.select();return true;")
+        return type_text(value)
 
     def no_mode(name):
         time.sleep(.15)
@@ -86,6 +89,7 @@ def run(args):
         assert main, "No regular test window"
         main_context = m.js("return window.browsingContext.id;")
         m.async_js("""
+          await gZenStartup.promiseInitialized;
           await KeywordTabSearch.ready;
           const {SearchService}=ChromeUtils.importESModule("moz-src:///toolkit/components/search/SearchService.sys.mjs");
           await SearchService.init();
@@ -100,7 +104,8 @@ def run(args):
           gBrowser.selectedTab=gBrowser.addTrustedTab(arguments[0]+"/source",{skipRoute:true});
           return true;
         """, [base])
-        wait("KeywordTabSearch.status==='ready' && !gBrowser.selectedBrowser.webProgress.isLoadingDocument")
+        wait("KeywordTabSearch.status==='ready' && gBrowser.selectedBrowser.currentURI.spec===" +
+             json.dumps(base + "/source") + " && !gBrowser.selectedBrowser.webProgress.isLoadingDocument")
         identity = m.js("return gBrowser.selectedBrowser.browsingContext.id;")
         check("keyword_tab", activate("kwtest"))
         check("activation_does_not_navigate", identity == m.js("return gBrowser.selectedBrowser.browsingContext.id;") and not any("/search?" in p for p in server.requests))
@@ -116,6 +121,125 @@ def run(args):
         check("stripped_token_alias", activate("kwtoken", "Token keyword test"))
         type_keyword("kwtest ")
         check("native_space_keyword", wait("gURLBar.searchMode?.engineName==='Keyword test'"))
+
+        # Match the user's actual shortcut in this disposable window. The
+        # production mod must not register or change any keyboard shortcut.
+        is_mac = m.js("return Services.appinfo.OS==='Darwin';")
+        accelerator = "\ue03d" if is_mac else "\ue009"
+        split_modifiers = (accelerator, "\ue009" if is_mac else "\ue00a", "\ue008")
+        m.js("""
+          const key=document.getElementById("zen-new-empty-split-view");
+          key.setAttribute("key","T");
+          key.setAttribute("modifiers",arguments[0]);
+          window.__keywordMainTab=gBrowser.selectedTab;
+          return true;
+        """, ["accel,control,shift" if is_mac else "accel,alt,shift"])
+        for scenario in ("regular", "pinned", "cancel"):
+            source_path = "/split-source-" + scenario
+            m.js("""
+              gURLBar.searchMode=null;
+              gBrowser.selectedTab=gBrowser.addTrustedTab(arguments[0],{skipRoute:true});
+              window.__keywordSplitSource=gBrowser.selectedTab;
+              if(arguments[1]) gBrowser.pinTab(__keywordSplitSource);
+              return true;
+            """, [base + source_path, scenario == "pinned"])
+            wait("gBrowser.selectedBrowser.currentURI.spec===" + json.dumps(base + source_path) +
+                 " && !gBrowser.selectedBrowser.webProgress.isLoadingDocument")
+            m.command("WebDriver:SwitchToWindow", {"handle": main})
+            m.command("Marionette:SetContext", {"value": "content"})
+            wait("document.getElementById('draft')")
+            m.js("document.getElementById('draft').value='Unsaved split draft';return true;")
+            m.command("Marionette:SetContext", {"value": "chrome"})
+            source_identity = m.js("""
+              return [__keywordSplitSource.linkedBrowser.browsingContext.id,
+                __keywordSplitSource.linkedBrowser.browsingContext.currentWindowGlobal.innerWindowId];
+            """)
+            tab_count = m.js("return gBrowser.tabs.length;")
+            key("t", modifiers=split_modifiers)
+            wait("gZenViewSplitter.waitingForSplitTab && gURLBar.focused && gURLBar.hasAttribute('zen-newtab')")
+            type_text("kwtest")
+            key("\ue004")
+            wait("gURLBar.searchMode?.engineName==='Keyword test'")
+            check("split_" + scenario + "_keyword_keeps_placeholder", m.js("""
+              return gZenViewSplitter.waitingForSplitTab &&
+                gBrowser.selectedTab.hasAttribute('zen-empty-tab') &&
+                gBrowser.selectedTab.splitView && gURLBar.hasAttribute('zen-newtab');
+            """) and tab_count == m.js("return gBrowser.tabs.length;"))
+            if scenario == "cancel":
+                # The first Escape exits engine mode; the next closes the
+                # pending split. Neither should submit or create a real tab.
+                submitted_before = len([p for p in server.requests if p.startswith("/search?")])
+                key("\ue00c")
+                key("\ue00c")
+                wait("!gZenViewSplitter.waitingForSplitTab && !gURLBar.hasAttribute('zen-newtab')")
+                check("split_escape_cancels_without_navigation",
+                      tab_count == m.js("return gBrowser.tabs.length;") and
+                      submitted_before == len([p for p in server.requests if p.startswith("/search?")]))
+            else:
+                query = scenario + " a & b/雪?="
+                type_text(query)
+                key("\ue007")
+                url = wait("gBrowser.selectedBrowser.currentURI.spec.startsWith(" +
+                           json.dumps(base + "/search?") + ") && gBrowser.selectedBrowser.currentURI.spec")
+                wait("!gZenViewSplitter.waitingForSplitTab && !gURLBar.hasAttribute('zen-newtab')")
+                check("split_" + scenario + "_submission_stays_beside_source", m.js("""
+                  return gBrowser.selectedTab!==__keywordSplitSource &&
+                    gBrowser.selectedTab.splitView && __keywordSplitSource.splitView &&
+                    gBrowser.selectedTab.group===__keywordSplitSource.group &&
+                    gBrowser.selectedTab.group.tabs.length===2 &&
+                    !gZenWorkspaces._emptyTab.splitView;
+                """) and tab_count + 1 == m.js("return gBrowser.tabs.length;") and
+                      parse_qs(urlsplit(url).query)["q"] == [query])
+                m.js("window.__keywordSplitResult=gBrowser.selectedTab;return true;")
+                if scenario == "regular":
+                    check("existing_split_accepts_keyword", activate("kwtest"))
+                    type_text("search in existing pane")
+                    key("\ue007")
+                    wait("gBrowser.selectedBrowser.currentURI.spec.includes('search+in+existing+pane')")
+                    check("existing_split_reuses_active_pane", m.js("""
+                      return gBrowser.selectedTab===__keywordSplitResult &&
+                        gBrowser.selectedTab.splitView &&
+                        gBrowser.selectedTab.group===__keywordSplitSource.group;
+                    """) and tab_count + 1 == m.js("return gBrowser.tabs.length;"))
+            check("split_" + scenario + "_source_document_preserved", source_identity == m.js("""
+              return [__keywordSplitSource.linkedBrowser.browsingContext.id,
+                __keywordSplitSource.linkedBrowser.browsingContext.currentWindowGlobal.innerWindowId];
+            """) and server.requests.count(source_path) == 1)
+            m.js("gBrowser.selectedTab=__keywordSplitSource;return true;")
+            m.command("WebDriver:SwitchToWindow", {"handle": main})
+            m.command("Marionette:SetContext", {"value": "content"})
+            check("split_" + scenario + "_draft_preserved",
+                  m.js("return document.getElementById('draft').value==='Unsaved split draft';"))
+            m.command("Marionette:SetContext", {"value": "chrome"})
+            m.js("""
+              if(window.__keywordSplitResult?.isConnected) {
+                gBrowser.removeTab(__keywordSplitResult,{animate:false});
+              }
+              delete window.__keywordSplitResult;
+              gBrowser.selectedTab=__keywordMainTab;
+              gBrowser.removeTab(__keywordSplitSource,{animate:false});
+              return true;
+            """)
+
+        tab_count = m.js("return gBrowser.tabs.length;")
+        key("t", modifiers=(accelerator,))
+        wait("gURLBar.hasAttribute('zen-newtab') && gURLBar.focused")
+        type_text("kwtest")
+        key("\ue004")
+        wait("gURLBar.searchMode?.engineName==='Keyword test'")
+        type_text("ordinary new tab")
+        key("\ue007")
+        wait("gBrowser.selectedBrowser.currentURI.spec.includes('ordinary+new+tab')")
+        wait("!gURLBar.hasAttribute('zen-newtab')")
+        check("ordinary_new_tab_search_stays_unsplit",
+              not m.js("return !!gBrowser.selectedTab.splitView;") and
+              tab_count + 1 == m.js("return gBrowser.tabs.length;"))
+        m.js("""
+          const result=gBrowser.selectedTab;
+          gBrowser.selectedTab=__keywordMainTab;
+          gBrowser.removeTab(result,{animate:false});
+          return true;
+        """)
 
         # Settings replaces a child about:blank document. Its unload used to
         # reach the chrome window's capture listener and destroy this mod.

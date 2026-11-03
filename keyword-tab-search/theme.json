@@ -2,7 +2,7 @@
   "id": "keyword-tab-search",
   "name": "Keyword Tab Search",
   "description": "Type a saved search keyword and press Tab to activate its engine.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "author": "Toby Wong",
   "createdAt": "2026-11-02",
   "updatedAt": "2026-11-03",

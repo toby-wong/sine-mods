@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name           Keyword Tab Search
-// @version        0.1.1
+// @version        0.1.2
 // @description    Activate a saved search keyword with Tab.
 // @include        chrome://browser/content/browser.xhtml
 // ==/UserScript==
 
 (() => {
   "use strict";
-  const VERSION = "0.1.1";
+  const VERSION = "0.1.2";
   const PREF = "uc.keyword-tab-search.enabled";
   const TOPIC = "browser-search-engine-modified";
   const normalize = value => value.toLocaleLowerCase();
@@ -56,6 +56,28 @@
     let index = new Map(), generation = 0, destroyed = false, composing = false;
     let queued = false;
     const api = { version: VERSION, status: "starting", refresh, destroy };
+    const parent = win.gURLBar?.parentController;
+    const originalOpen = parent?.openSERP;
+    const ownOpen = parent && Object.getOwnPropertyDescriptor(parent, "openSERP");
+    function openSearch(...args) {
+      const [, , where, inBackground, browserId] = args;
+      const bar = win.gURLBar;
+      const tab = win.gBrowser?.selectedTab;
+      if (!destroyed && prefs.getBoolPref(PREF, true) &&
+          where === "tab" && !inBackground &&
+          win.gZenViewSplitter?.waitingForSplitTab &&
+          tab?.splitView && tab.hasAttribute("zen-empty-tab") &&
+          bar.hasAttribute("zen-newtab") &&
+          (browserId == null || browserId === tab.linkedBrowser?.browserId) &&
+          typeof bar._zenHandleUrlbarClose === "function") {
+        // Native engine-mode Enter bypasses pickResult's close notification.
+        // Give Zen the same result-picked signal before the new tab is selected,
+        // so it completes the pending split instead of cancelling its placeholder.
+        bar._zenHandleUrlbarClose(true, true);
+      }
+      return originalOpen.apply(this, args);
+    }
+    if (typeof originalOpen === "function") parent.openSERP = openSearch;
     async function refresh() {
       const request = ++generation;
       index = new Map();
@@ -115,6 +137,10 @@
       index.clear();
       observers.removeObserver(observer, TOPIC);
       for (const [type, handler, capture] of events) win.removeEventListener(type, handler, capture);
+      if (parent?.openSERP === openSearch) {
+        if (ownOpen) Object.defineProperty(parent, "openSERP", ownOpen);
+        else delete parent.openSERP;
+      }
       api.status = "destroyed";
       if (win.KeywordTabSearch === api) delete win.KeywordTabSearch;
     }
