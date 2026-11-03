@@ -1,0 +1,16 @@
+{
+  "id": "ctrl-tab-theme",
+  "name": "Ctrl Tab Theme",
+  "description": "Match the native Ctrl+Tab switcher to your Space colours, with clear selection and balanced previews.",
+  "version": "0.1.0",
+  "author": "Toby Wong",
+  "createdAt": "2026-11-03",
+  "updatedAt": "2026-11-03",
+  "homepage": "https://github.com/toby-wong/sine-mods/tree/main/ctrl-tab-theme",
+  "readme": "https://raw.githubusercontent.com/toby-wong/sine-mods/main/ctrl-tab-theme/README.md",
+  "fork": ["zen"],
+  "tags": ["tabs", "theme", "accessibility"],
+  "ai": "yes",
+  "style": {"chrome": "ctrl-tab.css", "content": ""},
+  "preferences": "preferences.json"
+}

@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name           Auto Glance
-// @version        0.2.2
+// @version        0.2.3
 // @description    Open link-created tabs as native Zen Glance previews.
 // @include        chrome://browser/content/browser.xhtml
 // ==/UserScript==
@@ -9,7 +9,7 @@
   "use strict";
 
   window.AutoGlance?.destroy();
-  const VERSION = "0.2.2";
+  const VERSION = "0.2.3";
   const PREFIX = "uc.auto-glance.";
   const cleanups = [];
   let destroyed = false;

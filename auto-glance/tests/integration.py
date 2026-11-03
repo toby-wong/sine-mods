@@ -145,6 +145,8 @@ def run(args):
         if name in ("target_blank", "glance_from_split"):
             image = m.command("WebDriver:TakeScreenshot", {"full": False, "scroll": False})
             args.report.with_name(name + ".png").write_bytes(base64.b64decode(image))
+        if name == "target_blank":
+            backdrop_settings_check()
         m.async_js("await gZenGlanceManager.closeGlance({hasFocused:true,skipPermitUnload:true});return true;")
         wait("!gBrowser.selectedTab.hasAttribute('zen-glance-tab')")
         content()
@@ -191,6 +193,95 @@ def run(args):
               details["newCount"] == 1 and details["loads"] == 1 and
               details["draftPreserved"] and details["container"] == source["container"])
         m.js("gBrowser.removeTab(document.getElementById(arguments[0]),{animate:false,skipPermitUnload:true});return true;", [new_id])
+
+    def backdrop_settings_check():
+        """Change the real Sine control while keeping the preview open."""
+        m.js("""
+          window.__backdropPreview=gBrowser.selectedTab;
+          window.__backdropParent=gZenGlanceManager.getTabOrGlanceParent(__backdropPreview);
+          window.__backdropDocuments=[__backdropPreview,__backdropParent].map(
+            t=>t.linkedBrowser.browsingContext.currentWindowGlobal.innerWindowId);
+          window.__backdropSettings=gBrowser.addTrustedTab("about:preferences#sineMods",{skipRoute:true});
+          return true;
+        """)
+        wait("__backdropSettings.linkedBrowser.contentDocument?.querySelector('#uc-auto-glance-backdrop-opacity menulist')")
+        m.js("""
+          const doc=__backdropSettings.linkedBrowser.contentDocument;
+          doc.defaultView.gotoPref("paneSineMods");
+          doc.querySelector('[mod-id="auto-glance"] .sineItemConfigureButton').click();
+          return true;
+        """)
+        preview_opacity_before = m.js("""
+          window.__backdropOldColour=document.documentElement.style.getPropertyValue("--zen-colors-secondary");
+          window.__backdropOldPriority=document.documentElement.style.getPropertyPriority("--zen-colors-secondary");
+          return getComputedStyle(gZenGlanceManager.browserWrapper).opacity;
+        """)
+
+        def measure_backdrop():
+            return m.js("""
+              const overlay=gZenGlanceManager.overlay, wrapper=gZenGlanceManager.browserWrapper;
+              const box=e=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height}};
+              const canvas=document.createElementNS("http://www.w3.org/1999/xhtml","canvas");
+              canvas.width=canvas.height=1;const ctx=canvas.getContext("2d");
+              ctx.fillStyle=getComputedStyle(overlay).backgroundColor;ctx.fillRect(0,0,1,1);
+              const sidebar=document.getElementById("navigator-toolbox");
+              const sidebarStyle=getComputedStyle(sidebar);
+              return {rgba:[...ctx.getImageData(0,0,1,1).data],
+                background:getComputedStyle(overlay).backgroundColor,
+                overlay:box(overlay),content:box(gBrowser.tabpanels),sidebar:box(sidebar),
+                sidebarOpacity:sidebarStyle.opacity,sidebarBackground:sidebarStyle.backgroundColor,
+                previewOpacity:getComputedStyle(wrapper).opacity,
+                sourceBlur:getComputedStyle(__backdropParent.linkedBrowser.closest(".browserSidebarContainer")).filter,
+                documents:[__backdropPreview,__backdropParent].map(
+                  t=>t.linkedBrowser.browsingContext.currentWindowGlobal.innerWindowId)};
+            """)
+
+        baseline = measure_backdrop()
+        try:
+            for value, expected in [("0%", 0), ("20%", 51), ("60%", 153), ("100%", 255)]:
+                m.js("""
+                  const doc=__backdropSettings.linkedBrowser.contentDocument;
+                  const control=doc.querySelector("#uc-auto-glance-backdrop-opacity menulist");
+                  control.value=arguments[0];
+                  control.dispatchEvent(new doc.defaultView.Event("command",{bubbles:true}));
+                  return true;
+                """, [value])
+                wait("getComputedStyle(document.documentElement).getPropertyValue('--uc-auto-glance-backdrop-opacity').trim()===" + json.dumps(value))
+                details = measure_backdrop()
+                check("backdrop_opacity_" + value, details,
+                      details["rgba"][3] == expected and
+                      details["overlay"]["x"] >= details["content"]["x"] - 1 and
+                      details["overlay"]["right"] <= details["content"]["right"] + 1 and
+                      details["sidebarOpacity"] == baseline["sidebarOpacity"] and
+                      details["sidebarBackground"] == baseline["sidebarBackground"] and
+                      details["previewOpacity"] == preview_opacity_before and
+                      details["sourceBlur"] == "blur(6px)" and
+                      details["documents"] == baseline["documents"])
+            for name, color, channels in [
+                ("light", "#d4e5d5", [212, 229, 213]),
+                ("dark", "#293d35", [41, 61, 53]),
+            ]:
+                m.js('document.documentElement.style.setProperty("--zen-colors-secondary",arguments[0],"important");return true;', [color])
+                details = measure_backdrop()
+                check("backdrop_theme_" + name, details, details["rgba"] == channels + [255])
+            m.js("""
+              const doc=__backdropSettings.linkedBrowser.contentDocument;
+              const control=doc.querySelector("#uc-auto-glance-backdrop-opacity menulist");
+              control.value="20%";
+              control.dispatchEvent(new doc.defaultView.Event("command",{bubbles:true}));
+              return true;
+            """)
+            wait("getComputedStyle(document.documentElement).getPropertyValue('--uc-auto-glance-backdrop-opacity').trim()==='20%'")
+            image = m.command("WebDriver:TakeScreenshot", {"full": False, "scroll": False})
+            args.report.with_name("glance-backdrop-configured.png").write_bytes(base64.b64decode(image))
+        finally:
+            m.js("""
+              const style=document.documentElement.style;
+              if(__backdropOldColour)style.setProperty("--zen-colors-secondary",__backdropOldColour,__backdropOldPriority);
+              else style.removeProperty("--zen-colors-secondary");
+              if(__backdropSettings?.isConnected)gBrowser.removeTab(__backdropSettings);
+              return true;
+            """)
 
     try:
         actual = m.js('return Services.dirsvc.get("ProfD",Ci.nsIFile).path;')

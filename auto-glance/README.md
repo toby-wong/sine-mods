@@ -24,6 +24,9 @@ would otherwise open its own preview.
 
 Glance previews are centered in the content area with a blurred backdrop.
 Closing, expanding, and splitting previews retain Zen's native behavior.
+The backdrop adds a light Space-coloured tint, making the area behind the
+preview slightly less transparent than the sidebar. The sidebar and the preview
+page itself are unchanged.
 
 The mod also clears abandoned temporary splits whose placeholder tab was
 closed. These can otherwise leave Glance stuck against the left edge before
@@ -33,6 +36,9 @@ specific failure without reloading it or its parent page.
 
 Open **Zen Settings → Sine → Auto Glance → Configure** to disable the behavior or
 configure the middle-click/context-menu behavior and Command-click override.
+**Extra backdrop opacity** controls the tint from **0%** (the original backdrop)
+to **100%** (opaque), with **20%** as the default. Changes apply immediately,
+including to an open preview, and the tint follows your Space colour.
 
 ## Scope
 

@@ -27,7 +27,8 @@ MOD_FILES = {
         "AltClickSplitViewChild.sys.mjs", "LICENSE",
     ),
     "keyword-tab-search": COMMON + ("keyword-tab-search.uc.js",),
-    "findbar-pane-fix": COMMON + ("findbar.css",),
+    "findbar-pane-fix": COMMON + ("findbar.css", "findbar-zoom.uc.js"),
+    "ctrl-tab-theme": COMMON + ("ctrl-tab.css",),
 }
 
 

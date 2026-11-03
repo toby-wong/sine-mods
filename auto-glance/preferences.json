@@ -24,6 +24,28 @@
     "defaultValue": true
   },
   {
+    "property": "uc.auto-glance.backdrop-opacity",
+    "label": "Extra backdrop opacity",
+    "type": "dropdown",
+    "defaultValue": "20%",
+    "processAs": "var",
+    "options": [
+      { "label": "0% — original backdrop", "value": "0%" },
+      { "label": "10% — subtle", "value": "10%" },
+      { "label": "20% — default", "value": "20%" },
+      { "label": "30%", "value": "30%" },
+      { "label": "40%", "value": "40%" },
+      { "label": "60%", "value": "60%" },
+      { "label": "80%", "value": "80%" },
+      { "label": "100% — opaque", "value": "100%" }
+    ]
+  },
+  {
+    "type": "text",
+    "label": "Adds your Space colour behind the preview, making this area less transparent than the sidebar. The sidebar and preview page stay unchanged.",
+    "size": "13px"
+  },
+  {
     "type": "text",
     "label": "Use Glance's expand button to keep a full tab, its split button for a split, or Escape to dismiss. Option-click split view keeps working.",
     "size": "13px"

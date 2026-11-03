@@ -1,0 +1,33 @@
+[
+  {
+    "type": "text",
+    "label": "The switcher follows your Space colours and automatically chooses readable text. Changes apply immediately. Native Ctrl+Tab navigation is unchanged.",
+    "size": "14px"
+  },
+  {
+    "type": "dropdown",
+    "property": "uc.ctrl-tab.opacity",
+    "label": "Background opacity",
+    "defaultValue": "96%",
+    "placeholder": false,
+    "processAs": "var",
+    "options": [
+      {"label": "90%", "value": "90%"},
+      {"label": "96% (default)", "value": "96%"},
+      {"label": "100% (solid)", "value": "100%"}
+    ]
+  },
+  {
+    "type": "dropdown",
+    "property": "uc.ctrl-tab.text-size",
+    "label": "Tab title size",
+    "defaultValue": "14px",
+    "placeholder": false,
+    "processAs": "var",
+    "options": [
+      {"label": "12px", "value": "12px"},
+      {"label": "14px (default)", "value": "14px"},
+      {"label": "16px", "value": "16px"}
+    ]
+  }
+]

@@ -2,7 +2,7 @@
   "id": "findbar-pane-fix",
   "name": "Find Bar Pane Fix",
   "description": "A readable, configurable page find bar that stays inside its pane, including split views.",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "author": "Toby Wong",
   "createdAt": "2026-11-02",
   "updatedAt": "2026-11-03",
@@ -12,5 +12,12 @@
   "tags": ["findbar", "split-view", "accessibility"],
   "ai": "yes",
   "style": {"chrome": "findbar.css", "content": ""},
-  "preferences": "preferences.json"
+  "scripts": {
+    "findbar-zoom.uc.js": {
+      "include": ["chrome://browser/content/browser.xhtml"],
+      "loadOrder": 90
+    }
+  },
+  "preferences": "preferences.json",
+  "supportsUnload": true
 }

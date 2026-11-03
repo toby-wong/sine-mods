@@ -1,10 +1,10 @@
 # Find Bar Pane Fix
 
-Version **0.1.3** keeps the **Cmd+F / Ctrl+F** bar inside its own page pane.
+Version **0.1.4** keeps the **Cmd+F / Ctrl+F** bar inside its own page pane.
 It defaults to a 96% opaque background, 14px labels, and 15px search text.
 Controls wrap in narrow panes, and closed find bars are fully hidden.
 
-This is a CSS mod. Finding text, match counts, navigation, and keyboard shortcuts
+Finding text, match counts, navigation, and keyboard shortcuts
 continue to use Zen's native implementation. It can be used alongside Better
 Find Bar; it corrects that mod's positioning while retaining the background
 color and blur. Some transparency remains, but page text is less distracting.
@@ -24,7 +24,8 @@ immediately, on macOS and Windows, without restarting or reloading pages.
 | Setting | Choices | Default |
 | --- | --- | --- |
 | Background opacity | 70–100%; higher values show less of the page underneath | 96% |
-| Text size | 12, 14, 16, 18, or 20px; search text is always 1px larger | 14px |
+| Text size | 8, 9, 10, 11, 12, 14, 16, 18, or 20px; search text is 1px larger | 14px |
+| Scale with page zoom | Scale the entire bar with its own page, or keep its size fixed | Off |
 | Background blur | Off, 4, 8, 12, or 16px | 8px |
 | Text colour | Automatic contrast, always white, or always black | Automatic |
 | Background colour | Space/theme colour or a custom CSS colour | Space/theme |
@@ -38,6 +39,13 @@ For very transparent bars, readability also depends on the page underneath.
 The choices are saved in your browser profile. To restore the original
 appearance, select the choices labelled **default** in this panel. Other Better
 Find Bar options remain in that mod's own configuration panel.
+
+**Scale with page zoom** uses a small browser script. With it enabled, a 10px
+label appears at 8px on a page zoomed to 80%, or 15px at 150%. Each split pane
+follows its own page's zoom; switching the toggle off immediately restores the
+chosen fixed size. The script listens for native zoom and tab events, without
+polling or reading page content. Allow custom JavaScript in Sine
+(`sine.allow-unsafe-js`) to use this option. Other styling works with CSS alone.
 
 ## Install on macOS or Windows
 

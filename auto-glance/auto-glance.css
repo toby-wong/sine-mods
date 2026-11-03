@@ -4,6 +4,18 @@
   filter: blur(6px) !important;
 }
 
+/* Add a Space-coloured layer over the existing background. This increases
+   opacity only behind Glance; the sidebar and preview keep their own styling.
+   Zero restores the original backdrop, and 100% makes the layer opaque. */
+#tabbrowser-tabpanels > .browserSidebarContainer.zen-glance-overlay,
+#zen-glance-detached > .zen-glance-detached-backdrop {
+  background-color: color-mix(
+    in srgb,
+    var(--zen-colors-secondary, Canvas) var(--uc-auto-glance-backdrop-opacity, 20%),
+    transparent
+  ) !important;
+}
+
 /* Anchor the settled preview to its overlay rather than a flex static position.
    Leave width to Zen so expanding a preview can still grow it to a full tab. */
 #tabbrowser-tabpanels > .browserSidebarContainer.zen-glance-overlay

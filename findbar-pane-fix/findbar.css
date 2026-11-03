@@ -14,6 +14,7 @@
   --uc-findbar-background-source: var(--var-findbar-background-color, var(--zen-colors-primary, Canvas));
   --uc-findbar-surface: Canvas;
   --uc-findbar-ink: CanvasText;
+  zoom: var(--uc-findbar-page-zoom, 1) !important;
   position: absolute !important;
   /* Native findbar occupies an empty grid row when floating. Use the whole
      pane so percentage limits resolve against the page, not that zero row. */

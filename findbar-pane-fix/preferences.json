@@ -30,12 +30,22 @@
     "placeholder": false,
     "processAs": "var",
     "options": [
+      {"label": "8px", "value": "8px"},
+      {"label": "9px", "value": "9px"},
+      {"label": "10px", "value": "10px"},
+      {"label": "11px", "value": "11px"},
       {"label": "12px", "value": "12px"},
       {"label": "14px (default)", "value": "14px"},
       {"label": "16px", "value": "16px"},
       {"label": "18px", "value": "18px"},
       {"label": "20px", "value": "20px"}
     ]
+  },
+  {
+    "type": "checkbox",
+    "property": "uc.findbar.scale-with-page-zoom",
+    "label": "Scale with page zoom",
+    "defaultValue": false
   },
   {
     "type": "dropdown",

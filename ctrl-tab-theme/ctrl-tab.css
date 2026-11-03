@@ -1,0 +1,146 @@
+/* Theme only the native switcher; leave tab ordering and key handling to Zen. */
+:root #ctrlTab-panel {
+  --uc-ctrl-tab-surface: Canvas;
+  --uc-ctrl-tab-ink: CanvasText;
+  --panel-background-color: color-mix(in srgb, var(--uc-ctrl-tab-surface) var(--uc-ctrl-tab-opacity, 96%), transparent) !important;
+  --panel-text-color: var(--uc-ctrl-tab-ink) !important;
+  --panel-border-color: color-mix(in srgb, var(--uc-ctrl-tab-ink) 20%, transparent) !important;
+  --panel-border-radius: 20px !important;
+  --panel-padding: 14px !important;
+  --panel-box-shadow: 0 8px 24px rgb(0 0 0 / 24%) !important;
+  --panel-box-shadow-margin: 16px !important;
+  color: var(--uc-ctrl-tab-ink) !important;
+}
+
+@supports (color: contrast-color(white)) and (background: rgb(from white r g b / 1)) {
+  :root #ctrlTab-panel {
+    --uc-ctrl-tab-surface: rgb(from var(--zen-colors-secondary, var(--zen-colors-primary, Canvas)) r g b / 1);
+    --uc-ctrl-tab-ink: contrast-color(var(--uc-ctrl-tab-surface));
+  }
+}
+
+:root #ctrlTab-panel::part(content) {
+  backdrop-filter: blur(12px);
+}
+
+/* Override the old Better CtrlTab Panel zoom and outdented icons. Native
+   columns, panel positioning, thumbnails, and hidden items are preserved. */
+:root #ctrlTab-panel #ctrlTab-previews {
+  zoom: 1 !important;
+  padding: 0 !important;
+  gap: 10px !important;
+}
+
+:root #ctrlTab-panel #ctrlTab-previews .ctrlTab-preview {
+  margin: 0 !important;
+  padding: 0 !important;
+  min-width: 0;
+  color: var(--uc-ctrl-tab-ink) !important;
+  text-shadow: none !important;
+}
+
+:root #ctrlTab-panel #ctrlTab-previews .ctrlTab-preview-inner {
+  display: grid !important;
+  grid-template-columns: 20px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  margin: 0 !important;
+  padding: 8px !important;
+  border: 2px solid transparent !important;
+  border-radius: 14px !important;
+  background: color-mix(in srgb, var(--uc-ctrl-tab-ink) 4%, transparent) !important;
+  text-shadow: none !important;
+}
+
+:root #ctrlTab-panel #ctrlTab-previews .ctrlTab-canvas {
+  grid-column: 1 / -1;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 !important;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--uc-ctrl-tab-ink) 16%, transparent);
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
+
+:root #ctrlTab-panel #ctrlTab-previews .ctrlTab-canvas > :is(img, canvas) {
+  display: block;
+  width: 100% !important;
+  max-width: 100%;
+  height: auto !important;
+  object-fit: cover;
+  border-radius: inherit !important;
+}
+
+:root #ctrlTab-panel #ctrlTab-previews .ctrlTab-favicon-container {
+  grid-column: 1;
+  grid-row: 2;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}
+
+:root #ctrlTab-panel #ctrlTab-previews .ctrlTab-favicon-container image {
+  position: static !important;
+  width: 20px !important;
+  height: 20px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 4px !important;
+  background: none !important;
+  box-shadow: none !important;
+}
+
+:root #ctrlTab-panel #ctrlTab-previews .ctrlTab-label {
+  grid-column: 2;
+  grid-row: 2;
+  min-width: 0;
+  margin: 0 !important;
+  padding: 0 !important;
+  color: var(--uc-ctrl-tab-ink) !important;
+  font-size: var(--uc-ctrl-tab-text-size, 14px) !important;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: normal !important;
+  text-align: start;
+  text-shadow: none !important;
+}
+
+:root #ctrlTab-panel #ctrlTab-previews .ctrlTab-preview:hover .ctrlTab-preview-inner {
+  background: color-mix(in srgb, var(--uc-ctrl-tab-ink) 8%, transparent) !important;
+}
+
+:root #ctrlTab-panel #ctrlTab-previews .ctrlTab-preview:focus .ctrlTab-preview-inner {
+  border-color: var(--uc-ctrl-tab-ink) !important;
+  background: color-mix(in srgb, var(--uc-ctrl-tab-ink) 12%, transparent) !important;
+}
+
+:root #ctrlTab-panel #ctrlTab-showAll {
+  color: var(--uc-ctrl-tab-ink) !important;
+  font-size: var(--uc-ctrl-tab-text-size, 14px) !important;
+  text-shadow: none !important;
+  background: color-mix(in srgb, var(--uc-ctrl-tab-ink) 6%, transparent) !important;
+  border: 2px solid transparent !important;
+  border-radius: 10px !important;
+  margin: 12px 0 0 !important;
+  padding: 6px 12px !important;
+}
+
+:root #ctrlTab-panel #ctrlTab-showAll:focus {
+  border-color: var(--uc-ctrl-tab-ink) !important;
+}
+
+@media (forced-colors: active) {
+  :root #ctrlTab-panel {
+    --uc-ctrl-tab-surface: Canvas;
+    --uc-ctrl-tab-ink: CanvasText;
+    --panel-background-color: Canvas !important;
+  }
+}

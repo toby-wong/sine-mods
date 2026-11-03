@@ -2,20 +2,25 @@
 
 ## Current status
 
-- Version **0.1.3** is a CSS-only correction for floating find-bar clipping in
+- Version **0.1.4** corrects floating find-bar clipping in
   Zen, including with Better Find Bar 1.7.1 enabled.
 - Anchors each bar to its own `.browserContainer`, bounds its width, wraps
   controls, defaults to the theme's background at 96% opacity, and removes hidden
   bars from layout. Labels default to 14px and the query is 1px larger.
 - Sine's Configure panel controls opacity, text size, blur, automatic/white/black
   text, and theme/custom backgrounds. Dropdown values become CSS variables or
-  attributes on `#theme-Find-Bar-Pane-Fix`; no runtime JavaScript is added.
+  attributes on `#theme-Find-Bar-Pane-Fix`.
+- Text sizes go down to 8px. Optional **Scale with page zoom** defaults off and
+  applies CSS `zoom` to each bar using its own browser's ZoomManager value.
+  `findbar-zoom.uc.js` listens for native zoom/tab events and a preference
+  observer. It uses weak bookkeeping, no polling, and restores inline state
+  on disable or unload. It does not inspect page contents.
 - `@property` validates the custom background as a color and falls back to
   `#525f2e` if invalid. Opacity is separate from the background color's alpha.
 - Native `contrast-color()` selects black or white from the background color,
   updating automatically with Space/theme changes. Older engines use a matching
   system background/text pair. No JavaScript or page reload is needed.
-- Validation: twenty browser checks passed on Zen 1.24b on macOS, covering
+- Validation: 26 browser checks passed on Zen 1.24b on macOS, covering
   regular, split, narrow, and Glance layouts, match counts, Enter/Shift+Enter,
   Escape, stylesheet removal, and live contrast changes across dark, light,
   and olive backgrounds. Opacity, font sizes, and visible control bounds are
@@ -23,6 +28,9 @@
   opacity, size, blur, manual text colors, custom colors, invalid-color fallback,
   and restoring defaults. Largest text fits a narrow split; preference changes
   preserve the original page document. Screenshots were visually inspected.
+  Fresh checks cover 8px labels, 80% and 150% page zoom, independent pane zoom,
+  turning scaling off and back on, and restoring fixed size on script unload.
+  Same-host pane fixtures use native per-tab zoom to avoid site zoom inheritance.
   Native Windows UI remains untested.
 
 ## Constraints and validation

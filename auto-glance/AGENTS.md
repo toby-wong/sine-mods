@@ -2,12 +2,20 @@
 
 ## Current status
 
-- Source baseline: **0.2.2**. Website-created tabs, configured middle-clicks, and
+- Source baseline: **0.2.3**. Website-created tabs, configured middle-clicks, and
   page context-menu new-tab actions can open as native Glance previews.
 - Mac Command-click is an explicit ordinary-background-tab override, including
   routed links, editable documents, frames, and links inside an existing preview.
 - Centering/backdrop handling and recovery from abandoned temporary split records
   are implemented. This is targeted recovery, not a general split-state reset.
+- Sine's **Extra backdrop opacity** control adds a Space-coloured layer only
+  behind Glance. It defaults to 20%, ranges from 0% to 100%, and applies through
+  a CSS variable without reloading pages. Sidebar and preview opacity are
+  unchanged. All 31 integration checks passed on Zen 1.24b on macOS, including
+  the actual Sine opacity control, dynamic light/dark colours, existing click
+  gestures, blur, centering, and document preservation. Private/Little Zen and
+  interrupted-split recovery suites also passed. Glance screenshots were
+  visually inspected.
 - Normal, private, and Little Zen windows are supported by the implementation.
   Browser validation has been on macOS; the override uses `metaKey`, so Windows
   Ctrl-click does **not** yet get equivalent treatment.

@@ -8,11 +8,12 @@ through [Sine](https://github.com/CosmoCreeper/Sine).
 | Project | Version | What it does |
 | --- | --- | --- |
 | [Little Zen](little-zen/) | 0.1.0 | Opens a compact temporary browsing window. **Open in Space** moves the live page into a normal window, preserving its state and container. |
-| [Auto Glance](auto-glance/) | 0.2.2 | Opens website-created tabs as Glance previews, keeps Mac Command-click as a normal background tab, and repairs interrupted Glance layout. |
+| [Auto Glance](auto-glance/) | 0.2.3 | Opens website-created tabs as Glance previews, keeps Mac Command-click as a normal background tab, and adds configurable Space-coloured backdrop opacity. |
 | [Tree Tabs Prototype](tree-tabs-prototype/) | 0.1.1 | Adds collapsible parent/child relationships to ordinary tabs. Moving a parent carries its descendants, including moves between Spaces. |
 | [Alt-click Split View — local fork](alt-click-split-view/) | 1.4.4-local | Opens Option/Alt-clicked links beside the current page while preserving the original document. Includes fixes for website routers, frames, Glance, pinned tabs, and Essentials. Based on Kostiantyn Kugot's mod. |
 | [Keyword Tab Search](keyword-tab-search/) | 0.1.0 | Activates an existing search keyword with Tab, including `keyword` for a saved `@keyword` alias, then uses native search mode. |
-| [Find Bar Pane Fix](findbar-pane-fix/) | 0.1.3 | Keeps Cmd/Ctrl+F inside its pane, with opacity, text size, blur, and colours configurable in Sine. |
+| [Find Bar Pane Fix](findbar-pane-fix/) | 0.1.4 | Keeps Cmd/Ctrl+F inside its pane, with configurable styling and optional scaling with page zoom. |
+| [Ctrl Tab Theme](ctrl-tab-theme/) | 0.1.0 | Matches the native Ctrl+Tab switcher to Space colours, with rounded previews, readable titles, and a clear selection outline. |
 
 All included projects are Sine mods. Other third-party mods from the original
 browser setup are not included.
@@ -33,6 +34,8 @@ browser behavior has **not** been tested.
   menu's **Open Link in New Tab** can become previews. Its explicit background-tab
   override currently checks **Command**, not Windows **Ctrl**. Windows Ctrl-click
   may therefore become Glance; do not assume it has the Mac override.
+  Adjust **Extra backdrop opacity** under its Sine Configure button to make the
+  area behind a preview less transparent, without changing the sidebar.
 - **Tree Tabs:** only ordinary, unpinned, ungrouped tabs participate. Splits,
   Essentials, native groups, Glance, private windows, and Little Zen windows are
   excluded. The experimental split-session tree support was reverted. Use
@@ -49,6 +52,9 @@ browser behavior has **not** been tested.
   Works alongside Better Find Bar and keeps each find bar within its owning
   page, including split panes and Glance previews. Change its appearance in
   **Settings → Sine → Find Bar Pane Fix → Configure**; changes apply immediately.
+- **Ctrl Tab Theme:** use **Control+Tab** on both Mac and Windows. Keeps native
+  switching behaviour and works alongside Better CtrlTab Panel. Configure
+  opacity and title size in **Settings → Sine Mods → Ctrl Tab Theme → Configure**.
 
 ## Install the Sine mods
 
@@ -61,8 +67,9 @@ browser behavior has **not** been tested.
    If **Settings → Sine** already appears, keep your existing installation.
 3. For mods that include custom JavaScript, set the `about:config` preference
    `sine.allow-unsafe-js` to `true` to allow Sine to load them. This preference
-   applies to other custom Sine JavaScript mods too. Find Bar Pane Fix is
-   CSS-only and does not require it.
+   applies to other custom Sine JavaScript mods too. Find Bar Pane Fix uses a
+   small script for its optional page-zoom scaling. Its other styling and
+   Ctrl Tab Theme work with CSS alone.
 4. Keep Zen's native Glance and Split View features enabled for the corresponding
    mods. Their preferences are under **Settings → Sine → [mod] → Configure**.
 
@@ -79,6 +86,7 @@ installation field:
 | Alt-click Split View — local fork | `https://github.com/toby-wong/sine-mods/tree/main/alt-click-split-view` |
 | Keyword Tab Search | `https://github.com/toby-wong/sine-mods/tree/main/keyword-tab-search` |
 | Find Bar Pane Fix | `https://github.com/toby-wong/sine-mods/tree/main/findbar-pane-fix` |
+| Ctrl Tab Theme | `https://github.com/toby-wong/sine-mods/tree/main/ctrl-tab-theme` |
 
 Use the same steps on macOS and Windows. Restart Zen after installation.
 The repository root is a collection, not a single installable mod. Use the fork

@@ -67,7 +67,7 @@ def run(args):
     def open_find():
         m.async_js("window.__findProbe=await gBrowser.getFindBar(gBrowser.selectedTab);return true;")
         m.command("WebDriver:SwitchToWindow", {"handle": m.command("WebDriver:GetWindowHandle")})
-        m.js("gURLBar.blur();gBrowser.selectedBrowser.focus();return true;")
+        m.js("window.__findProbe.close();gURLBar.blur();gBrowser.selectedBrowser.focus();return true;")
         key("f", accelerator=True)
         wait("!window.__findProbe.hidden")
         time.sleep(.4)
@@ -92,7 +92,7 @@ def run(args):
             labelFont:getComputedStyle(label).fontSize,inputFont:getComputedStyle(bar._findField).fontSize,
             controls:[...bar.querySelectorAll(".findbar-container > checkbox, .findbar-label")]
               .map(box).filter(rect=>rect.width && rect.height),
-            backdropFilter:css.backdropFilter,position:css.position,hidden:bar.hidden,
+            backdropFilter:css.backdropFilter,position:css.position,zoom:Number(css.zoom),hidden:bar.hidden,
             scrollWidth:bar.scrollWidth,clientWidth:bar.clientWidth,
             focused:document.activeElement===bar._findField};
         """)
@@ -103,7 +103,7 @@ def run(args):
             inner["y"] >= outer["y"] - 1 and inner["bottom"] <= outer["bottom"] + 1
         )
 
-    def check_layout(name, *, opacity=245, size=14, blur=8):
+    def check_layout(name, *, opacity=245, size=14, blur=8, zoom=1):
         result = measure()
         report["checks"][name] = result
         assert visible_inside(result["pane"], result["bar"]), (name, result)
@@ -116,6 +116,7 @@ def run(args):
         assert result["color"] in ("rgb(0, 0, 0)", "rgb(255, 255, 255)"), result
         assert result["labelColor"] == result["buttonColor"] == result["color"], result
         assert result["labelFont"] == f"{size}px" and result["inputFont"] == f"{size + 1}px", result
+        assert abs(result["zoom"] - zoom) < .001, result
         assert result["focused"], (name, result)
         print("PASS", name, flush=True)
 
@@ -130,6 +131,10 @@ def run(args):
         preferences_file = mods / "findbar-pane-fix/preferences.json"
         original_registry = registry.read_bytes()
         original_preferences = preferences_file.read_bytes()
+        site_zoom_pref = m.js("""return {
+          hasValue:Services.prefs.prefHasUserValue("browser.zoom.siteSpecific"),
+          value:Services.prefs.getBoolPref("browser.zoom.siteSpecific")
+        };""")
         preferences = json.loads((ROOT / "findbar-pane-fix/preferences.json").read_text())
         defaults = {pref["property"]: pref["defaultValue"] for pref in preferences if "property" in pref}
         metadata = json.loads(original_registry)
@@ -165,12 +170,19 @@ def run(args):
                 m.js("""
                   gBrowser.selectedTab=__findSettingsTab;
                   const doc=__findSettingsTab.linkedBrowser.contentDocument;
-                  const control=doc.getElementById(arguments[0].replaceAll(".","-")).querySelector("menulist,input");
+                  const row=doc.getElementById(arguments[0].replaceAll(".","-"));
+                  if(typeof arguments[1]==="boolean"){
+                    if(Services.prefs.getBoolPref(arguments[0],false)!==arguments[1])row.click();
+                    return true;
+                  }
+                  const control=row.querySelector("menulist,input");
                   control.value=arguments[1];
                   control.dispatchEvent(new doc.defaultView.Event(control.localName==="input"?"change":"command",{bubbles:true}));
                   return true;
                 """, [property_name, value])
-                wait("Services.prefs.getStringPref(" + json.dumps(property_name) + ") === " + json.dumps(value))
+                getter = "getBoolPref" if isinstance(value, bool) else "getStringPref"
+                fallback = ", false" if isinstance(value, bool) else ""
+                wait("Services.prefs." + getter + "(" + json.dumps(property_name) + fallback + ") === " + json.dumps(value))
                 wait(expression)
                 m.js("gBrowser.selectedTab=__findSettingsPage;__findProbe._findField.focus();return true;")
 
@@ -208,12 +220,63 @@ def run(args):
             wait("getComputedStyle(__findProbe).fontSize === '14px' && getComputedStyle(__findProbe).backgroundColor.includes('0.96')")
             open_find()
             check_layout("configured_defaults_restored")
+
+            change("uc.findbar.text-size", "8px", "getComputedStyle(__findProbe).fontSize === '8px'")
+            open_find()
+            check_layout("eight_pixel_text", size=8)
+            # Both test pages share a host. Use native per-tab zoom so changing
+            # one pane does not overwrite the other pane's saved site zoom.
+            m.js('Services.prefs.setBoolPref("browser.zoom.siteSpecific",false);return true;')
+            change("uc.findbar.scale-with-page-zoom", True,
+                   "Services.prefs.getBoolPref('uc.findbar.scale-with-page-zoom')")
+            m.js("FullZoom.setZoom(.8,__findSettingsPage.linkedBrowser);return true;")
+            wait("Number(getComputedStyle(__findProbe).zoom) === .8")
+            open_find()
+            check_layout("zoom_eighty_percent", size=8, zoom=.8)
+            m.js("FullZoom.setZoom(1.5,__findSettingsPage.linkedBrowser);return true;")
+            wait("Number(getComputedStyle(__findProbe).zoom) === 1.5")
+            open_find()
+            check_layout("zoom_one_fifty_percent", size=8, zoom=1.5)
+            screenshot("findbar-zoomed")
+            m.async_js("""
+              FullZoom.setZoom(1.25,__findTabs[0].linkedBrowser);
+              window.__leftZoomBar=await gBrowser.getFindBar(__findTabs[0]);
+              return true;
+            """)
+            wait("Number(getComputedStyle(__leftZoomBar).zoom) === 1.25")
+            report["checks"]["independent_pane_zoom"] = m.js("""
+              return Number(getComputedStyle(__findProbe).zoom)===1.5 &&
+                Number(getComputedStyle(__leftZoomBar).zoom)===1.25;
+            """)
+            assert report["checks"]["independent_pane_zoom"]
+            change("uc.findbar.scale-with-page-zoom", False,
+                   "Number(getComputedStyle(__findProbe).zoom) === 1 && Number(getComputedStyle(__leftZoomBar).zoom) === 1")
+            report["checks"]["zoom_toggle_restores_fixed_size"] = True
+            change("uc.findbar.scale-with-page-zoom", True,
+                   "Number(getComputedStyle(__findProbe).zoom) === 1.5")
+            m.js("FindbarPageZoom.destroy();return true;")
+            report["checks"]["zoom_unload_restores_fixed_size"] = m.js("""
+              return Number(getComputedStyle(__findProbe).zoom)===1 &&
+                !__findProbe.style.getPropertyValue("--uc-findbar-page-zoom") &&
+                !__leftZoomBar.style.getPropertyValue("--uc-findbar-page-zoom");
+            """)
+            assert report["checks"]["zoom_unload_restores_fixed_size"]
+            change("uc.findbar.scale-with-page-zoom", False, "true")
+            change("uc.findbar.text-size", "14px", "getComputedStyle(__findProbe).fontSize === '14px'")
+            m.js("for(const tab of __findTabs)ZoomManager.setZoomForBrowser(tab.linkedBrowser,1);return true;")
             report["checks"]["settings_preserve_document"] = m.js("""
               return __findSettingsPage.linkedBrowser.browsingContext.currentWindowGlobal.innerWindowId === __findSettingsDocument;
             """)
             assert report["checks"]["settings_preserve_document"]
         finally:
-            m.js("for(const [name,value] of Object.entries(arguments[0]))Services.prefs.setStringPref(name,value);return true;", [defaults])
+            m.js("""if(arguments[0].hasValue)
+              Services.prefs.setBoolPref("browser.zoom.siteSpecific",arguments[0].value);
+              else Services.prefs.clearUserPref("browser.zoom.siteSpecific");
+              return true;""", [site_zoom_pref])
+            m.js("""for(const [name,value] of Object.entries(arguments[0])){
+              if(typeof value==="boolean")Services.prefs.setBoolPref(name,value);
+              else Services.prefs.setStringPref(name,value);
+            }return true;""", [defaults])
             m.js("if(window.__findSettingsTab?.isConnected)gBrowser.removeTab(__findSettingsTab);return true;")
             preferences_file.write_bytes(original_preferences)
             registry.write_bytes(original_registry)
@@ -242,6 +305,11 @@ def run(args):
           return true;
         """, [(ROOT / "findbar-pane-fix/findbar.css").as_uri() + "?test=" + str(time.time_ns())])
         fixed = True
+        (args.profile / "chrome/sine-mods/findbar-pane-fix/findbar-zoom.uc.js").write_bytes(
+            (ROOT / "findbar-pane-fix/findbar-zoom.uc.js").read_bytes())
+        m.js("""Services.scriptloader.loadSubScriptWithOptions(
+          "chrome://sine/content/findbar-pane-fix/findbar-zoom.uc.js",
+          {target:window,ignoreCache:true});return true;""")
         time.sleep(.2)
         check_layout("split_pane")
         screenshot("findbar-after")
@@ -328,6 +396,7 @@ def run(args):
         args.report.write_text(json.dumps(report, indent=2) + "\n")
         if fixed:
             m.js("window.windowUtils.removeSheet(window.__findFixURI,window.windowUtils.USER_SHEET);return true;")
+        m.js("window.FindbarPageZoom?.destroy();return true;")
         if original_color is not None:
             m.js('document.documentElement.style.setProperty("--var-findbar-background-color",arguments[0],arguments[1]);return true;', original_color)
         if clipboard is not None:
