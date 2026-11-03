@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Alt-click Split View
 // @author         Kostiantyn Kugot
-// @version        1.4.4-local
+// @version        1.4.5-local
 // @description    Open Alt-clicked links in Zen Split View.
 // @include        chrome://browser/content/browser.xhtml
 // ==/UserScript==
@@ -10,6 +10,7 @@
   const ENABLED_PREF = 'uc.alt-click-split-view.enabled';
   const TRIGGER_PREF = 'uc.alt-click-split-view.trigger';
   const HOVER_PREF = 'uc.alt-click-split-view.focus-on-hover';
+  const ADAPTIVE_PREF = 'uc.alt-click-split-view.adaptive-direction';
   const MODIFIER_KEYS = Object.freeze({
     ctrl: 'ctrlKey',
     alt: 'altKey',
@@ -62,14 +63,73 @@
     };
   }
 
+  function installAdaptiveSplits(win, prefs) {
+    const splitter = win.gZenViewSplitter;
+    const glance = win.gZenGlanceManager;
+    const cleanup = [], glancePairs = new Set();
+    let destroyed = false;
+    const tallWindow = () => !destroyed &&
+      prefs.getBoolPref(ENABLED_PREF, true) && prefs.getBoolPref(ADAPTIVE_PREF, true) &&
+      win.outerWidth > 0 && win.outerHeight > win.outerWidth;
+    const wrap = (owner, key, makeWrapper) => {
+      if (typeof owner?.[key] !== 'function') return;
+      const original = owner[key];
+      const descriptor = Object.getOwnPropertyDescriptor(owner, key);
+      const wrapped = makeWrapper(original);
+      owner[key] = wrapped;
+      cleanup.push(() => {
+        if (owner[key] !== wrapped) return;
+        if (descriptor) Object.defineProperty(owner, key, descriptor);
+        else delete owner[key];
+      });
+    };
+    wrap(splitter, 'splitTabs', original => function adaptiveSplitTabs(...args) {
+      const [input, gridType] = args;
+      if (tallWindow() && !this._sessionRestoring && Array.isArray(input) && input.length === 2) {
+        const tabs = input.map(tab => glance?.getTabOrGlanceParent?.(tab) || tab);
+        const newPair = tabs[0] !== tabs[1] && tabs.every(tab =>
+          tab && !tab.hidden && !tab.splitView && !tab.hasAttribute('zen-empty-tab'));
+        // Glance hard-codes vsep for its default Split button. Recognize only
+        // the exact pair being promoted, without overriding explicit layouts
+        // chosen elsewhere while that asynchronous promotion is in flight.
+        const glanceDefault = gridType === 'vsep' &&
+          [...glancePairs].some(pair => tabs.every(tab => pair.includes(tab)));
+        if (newPair && (gridType == null || glanceDefault)) args[1] = 'hsep';
+      }
+      return original.apply(this, args);
+    });
+    wrap(splitter, 'createEmptySplit', original => function adaptiveEmptySplit(...args) {
+      if (args[0] === undefined && tallWindow() && !this._sessionRestoring) args[0] = 'bottom';
+      return original.apply(this, args);
+    });
+    wrap(glance, 'splitGlance', original => async function adaptiveGlanceSplit(...args) {
+      const pair = [this.getFocusedTab(-1), this.getFocusedTab()];
+      if (destroyed || pair.some(tab => !tab) || pair[0] === pair[1]) {
+        return original.apply(this, args);
+      }
+      glancePairs.add(pair);
+      try {
+        return await original.apply(this, args);
+      } finally {
+        glancePairs.delete(pair);
+      }
+    });
+    return () => {
+      if (destroyed) return;
+      destroyed = true;
+      glancePairs.clear();
+      for (const restore of cleanup.reverse()) restore();
+    };
+  }
+
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { shouldSplitLinkClick, installHoverFocus };
+    module.exports = { shouldSplitLinkClick, installHoverFocus, installAdaptiveSplits };
     return;
   }
 
   window.AltClickSplitView?.destroy({ reloading: true });
   const hookKey = '__altClickSplitViewHook';
-  let cleanup, cleanupHover, cleanupSplits, cleanupStartup;
+  let cleanup, cleanupHover, cleanupSplits, cleanupAdaptive, cleanupStartup;
   let destroyed = false;
   const report = error => console.error('[Alt-click Split View]', error);
   const enabled = () => Services.prefs.getBoolPref(ENABLED_PREF, true);
@@ -301,6 +361,8 @@
     destroyed = true;
     cleanupStartup?.();
     cleanupStartup = null;
+    cleanupAdaptive?.();
+    cleanupAdaptive = null;
     cleanupSplits?.(options);
     cleanupSplits = null;
     cleanupHover?.();
@@ -312,9 +374,9 @@
   }
 
   const unload = () => destroy({ reloading: true });
-  const api = { version: '1.4.4-local', status: 'starting', destroy };
+  const api = { version: '1.4.5-local', status: 'starting', destroy };
   window.AltClickSplitView = api;
-  for (const pref of [ENABLED_PREF, TRIGGER_PREF, HOVER_PREF]) {
+  for (const pref of [ENABLED_PREF, TRIGGER_PREF, HOVER_PREF, ADAPTIVE_PREF]) {
     Services.prefs.setBoolPref(`services.sync.prefs.sync.${pref}`, false);
     Services.prefs.setBoolPref(`services.sync.prefs.sync-seen.${pref}`, false);
   }
@@ -341,6 +403,7 @@
     await gZenStartup.promiseInitialized;
     if (destroyed) return;
     cleanupSplits = preserveLivePages();
+    cleanupAdaptive = installAdaptiveSplits(window, Services.prefs);
     api.status = 'ready';
   })().catch(error => {
     api.status = 'error';

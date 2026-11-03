@@ -1,19 +1,22 @@
-// Alt-click Split View settings · Kostiantyn Kugot · 1.4.4-local
+// Alt-click Split View settings · Kostiantyn Kugot · 1.4.5-local
 (() => {
   window.SplitLinkSettings?.destroy();
   const enabledPref = 'uc.alt-click-split-view.enabled';
   const triggerPref = 'uc.alt-click-split-view.trigger';
   const hoverPref = 'uc.alt-click-split-view.focus-on-hover';
+  const adaptivePref = 'uc.alt-click-split-view.adaptive-direction';
   const glanceEnabledPref = 'zen.glance.enabled';
   const glanceTriggerPref = 'zen.glance.activation-method';
-  const observedPrefs = [enabledPref, triggerPref, hoverPref, glanceEnabledPref, glanceTriggerPref];
+  const observedPrefs = [enabledPref, triggerPref, hoverPref, adaptivePref, glanceEnabledPref, glanceTriggerPref];
   const html = (tag) => document.createElementNS('http://www.w3.org/1999/xhtml', tag);
-  let section, enabled, trigger, error, hover;
+  let section, enabled, trigger, error, hover, adaptive;
 
   function refresh() {
     if (!section) return;
     enabled.checked = Services.prefs.getBoolPref(enabledPref, true);
     hover.checked = Services.prefs.getBoolPref(hoverPref, false);
+    adaptive.checked = Services.prefs.getBoolPref(adaptivePref, true);
+    adaptive.disabled = !enabled.checked;
     trigger.value = Services.prefs.getStringPref(triggerPref, 'alt');
     trigger.disabled = !enabled.checked;
     const conflict = enabled.checked && Services.prefs.getBoolPref(glanceEnabledPref, true) &&
@@ -76,7 +79,13 @@
       hover.id = 'split-link-hover';
       hover.addEventListener('change', () => Services.prefs.setBoolPref(hoverPref, hover.checked));
       hoverLabel.append(hover, ' Switch split panes when you move the mouse cursor');
-      fieldset.append(toggleLabel, row, hoverLabel, error);
+      const adaptiveLabel = html('label');
+      adaptive = html('input');
+      adaptive.type = 'checkbox';
+      adaptive.id = 'split-link-adaptive-direction';
+      adaptive.addEventListener('change', () => Services.prefs.setBoolPref(adaptivePref, adaptive.checked));
+      adaptiveLabel.append(adaptive, ' Stack new panes top-to-bottom in tall windows');
+      fieldset.append(toggleLabel, row, hoverLabel, adaptiveLabel, error);
       card.append(fieldset);
       section.append(card);
       enabled.addEventListener('change', () => Services.prefs.setBoolPref(enabledPref, enabled.checked));

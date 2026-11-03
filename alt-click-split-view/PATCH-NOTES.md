@@ -1,5 +1,19 @@
 # Local split fixes
 
+## 1.4.5-local — 2026-11-03
+
+- New default two-pane splits stack top-to-bottom when the Zen window is taller
+  than it is wide. Wide and square windows keep the native side-by-side default.
+- Covers Option/Alt-click, New Empty Split with keyword search, and Glance's
+  Split button. Explicit directions/layouts, existing groups, and restored
+  sessions keep their chosen layout.
+- Adds **Stack new panes top-to-bottom in tall windows**, enabled by default,
+  in both Sine configuration and the Tab Management card. Changes affect the
+  next split without restarting.
+- Uses native split creation and preserves live source pages. No resizing
+  listener or page reload is needed. Hot reload removes the direction wrappers
+  before the existing page-preservation wrapper.
+
 ## 1.4.4-local — 2026-10-31
 
 - Use only the native tab accelerator when passing a split click through

@@ -3,7 +3,7 @@
 Option-click a web link on macOS, or Alt-click on Windows, to open it beside the
 source page in Zen's native Split View.
 
-This is version **1.4.4-local**, based on **1.4.2** of
+This is version **1.4.5-local**, based on **1.4.2** of
 [Kostiantyn Kugot's Alt-click Split View](https://github.com/kkugot/alt-click-split-view).
 The upstream author and [MIT license](LICENSE) are retained.
 
@@ -20,6 +20,10 @@ The upstream author and [MIT license](LICENSE) are retained.
 - Restores temporary pin/Essential state after separating a managed split.
 - Keeps existing splits during hot reload. Disabling the mod separates its
   managed splits without closing or reloading their pages.
+- Uses a horizontal divider for new two-pane splits when the browser window is
+  taller than it is wide. Wide and square windows keep side-by-side panes.
+  This applies to Option/Alt-click, New Empty Split (including keyword searches),
+  and Glance's Split button.
 
 See [PATCH-NOTES.md](PATCH-NOTES.md) for details and
 [VERIFICATION.md](VERIFICATION.md) for validation records.
@@ -41,9 +45,16 @@ For installation from a local checkout, use the shared installer with
 The fork and upstream use the same mod ID, so install one or the other in a
 profile. The shared installer disables automatic updates for this local copy.
 
-Configure the modifier and optional pointer-hover pane switching under
+Configure the modifier, automatic direction, and optional pointer-hover pane switching under
 **Settings → Sine → Alt-click Split View → Configure**. Avoid assigning the same
 modifier to Glance; the mod yields when those shortcuts conflict.
+
+**Stack new panes top-to-bottom in tall windows** is on by default. Turn it off
+to keep Zen's normal split defaults. The toggle also appears under Tab
+Management in the **Open links in Split View** card. It takes effect for the
+next split without restarting. Explicit layout/direction choices remain
+available; existing splits retain their layout when the window is resized or
+the browser restarts.
 
 The browser implementation supports selecting Alt/Option, Ctrl, Shift, or Meta
 (Command on macOS, Windows/Super elsewhere). The operating system may reserve
@@ -89,3 +100,5 @@ node --test alt-click-split-view/tests/alt-click-split-view.test.cjs
 The Python browser regressions require a separately configured disposable Zen
 profile. They check document identity, page state, frames, pinned/Essential
 restoration, Glance promotion, and repeated split operations.
+`tests/adaptive.py` also checks actual pane geometry, the new-split keyboard
+shortcut with keyword search, settings changes, and layout preservation.

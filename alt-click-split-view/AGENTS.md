@@ -2,7 +2,7 @@
 
 ## Current status
 
-- Source baseline: **1.4.4-local**, a fork of Kostiantyn Kugot's **1.4.2** mod.
+- Source baseline: **1.4.5-local**, a fork of Kostiantyn Kugot's **1.4.2** mod.
   Preserve the upstream author and [MIT license](LICENSE).
 - A capturing content actor handles routed links and frames before page handlers.
   Option/Alt-click opens a native split while preserving the original document.
@@ -10,12 +10,21 @@
   reused, with temporary pin state restored when the managed split is separated.
 - Hover-based pane focus is optional. A separate optional Hammerspoon guard
   preserves Option-click when focusing a background Zen/Arc window.
+- Automatic direction is enabled by default through
+  `uc.alt-click-split-view.adaptive-direction`. New default two-pane splits use
+  a horizontal divider when `outerHeight > outerWidth`; other window shapes
+  retain the native default. Covers modifier-click, New Empty Split, and
+  Glance's Split button. The Sine and Tab Management controls update live.
 - Parent-hook tests cover Windows, macOS, and Linux tab accelerators and Glance
   conflicts. Live browser evidence is from macOS on Zen 1.24b; Windows desktop
   input has not been validated. See
   [PATCH-NOTES.md](PATCH-NOTES.md) and [VERIFICATION.md](VERIFICATION.md).
-- Current validation: 8 Node tests, 15 live split cases, 25 Auto Glance checks,
-  plus unload and restart restoration checks passed in a disposable profile.
+- Current validation: 14 Node tests, 63 adaptive-layout checks, 15 split
+  regressions, 36 Keyword Tab Search checks, and 31 Auto Glance checks passed.
+  A separate restart restored the saved horizontal layout in a wide window;
+  unsplitting restored an Essential and preserved its current document/draft.
+  Unload restored the native methods. All browser checks used a disposable
+  macOS profile on Zen 1.24b.
 
 ## Implementation constraints
 
@@ -33,6 +42,15 @@
   that reuses live pages; document identity and draft preservation are required.
 - Preserve SessionStore return state for pins/Essentials and the distinction
   between hot reload (keep managed splits) and disable (separate/restore them).
+- Adapt only new default pairs. Preserve explicit `gridType`/side choices,
+  existing split groups, and session restoration. Never reflow on resize or
+  load pages to change direction.
+- Glance passes `vsep` explicitly for its default Split action. The adaptive
+  wrapper tracks the exact parent/preview pair during that asynchronous
+  promotion; never use a global flag that could affect an unrelated split.
+- Remove the adaptive wrappers before the page-preservation wrapper during
+  unload. Restore only methods still owned by this instance, and leave any
+  retained wrapper inert after cleanup.
 - Do not silently install or broaden the Hammerspoon guard: it also affects
   background clicks in other applications. Keep it separate from browser files.
 - If runtime resources change, update the collection's shared installer. Keep
@@ -61,6 +79,13 @@ browsing-context identity, drafts, and request counts; seeing two panes alone
 does not prove the source avoided a reload. Run Auto Glance integration when
 changing shared click handling, and test actual background-window clicks when
 changing the Hammerspoon guard.
+
+Run `tests/adaptive.py --profile ... --port ... --report ...` for geometry,
+real keyboard/Option-click input, Glance, and the settings toggle. Its profile
+needs this collection's Keyword Tab Search and Auto Glance mods enabled.
+Use a fresh disposable profile after a deliberately failing empty-split test:
+an interrupted pending native split can leave its shared placeholder attached.
+The old 1.4.4-local build fails the tall-window placeholder check.
 
 ## Potential future direction
 

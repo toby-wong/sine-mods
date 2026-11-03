@@ -23,6 +23,12 @@
     "defaultValue": false
   },
   {
+    "property": "uc.alt-click-split-view.adaptive-direction",
+    "label": "Stack new panes top-to-bottom in tall windows",
+    "type": "checkbox",
+    "defaultValue": true
+  },
+  {
     "property": "uc.alt-click-split-view.trigger",
     "label": "Trigger method",
     "type": "dropdown",

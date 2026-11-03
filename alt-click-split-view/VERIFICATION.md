@@ -1,5 +1,32 @@
 # Alt-click Split View verification
 
+## 1.4.5-local — adaptive direction
+
+Validation used Zen 1.24b on macOS in a disposable profile:
+
+- 14 Node tests passed, including direction defaults, explicit choices,
+  existing groups, session restoration guards, live preference changes, scoped
+  asynchronous Glance promotion, and method restoration.
+- 63 adaptive-layout checks passed. Actual window resizing and pane rectangles
+  confirmed tall, wide, and square behavior. Real keyboard input exercised
+  Ctrl+Cmd+Shift+T followed by keyword, Tab, query, and Enter. Option-click,
+  Glance Split, pinned tabs, Essentials, drafts, explicit directions, the
+  settings checkbox, resize preservation, and hot reload were covered.
+- All 15 split regressions, 36 Keyword Tab Search checks, and 31 Auto Glance
+  checks passed.
+- Restarting with a wide window restored a saved top-to-bottom split.
+  Separating that restored split returned its source to Essentials and retained
+  the current source document and draft. Unload restored the native methods
+  without closing tabs.
+
+A live reload into the everyday profile also preserved open tabs, split layouts,
+window geometry, address-bar state, selection, preferences, and other mod
+instances. The updated hooks became active without a browser restart.
+
+The 1.4.4-local baseline fails the tall-window empty-split direction check.
+Reports and profiles remain outside Git. Native Windows/Linux input remains
+untested; the existing platform-routing tests use simulation.
+
 ## 1.4.4-local — platform compatibility
 
 Eight Node tests passed, including execution of the parent hook against simulated
