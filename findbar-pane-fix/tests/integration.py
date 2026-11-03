@@ -95,8 +95,8 @@ def run(args):
         assert visible_inside(result["bar"], result["input"]), (name, result)
         assert visible_inside(result["bar"], result["close"]), (name, result)
         assert result["scrollWidth"] <= result["clientWidth"] + 1, (name, result)
-        assert result["backdropFilter"] == "none", result
-        assert result["background"].startswith("rgb("), result
+        assert result["backdropFilter"] == report["baseline"]["backdropFilter"], result
+        assert result["background"] == report["baseline"]["background"], result
         assert result["focused"], (name, result)
         print("PASS", name, flush=True)
 

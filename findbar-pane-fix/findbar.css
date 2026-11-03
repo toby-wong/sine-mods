@@ -26,9 +26,7 @@
   overflow: auto !important;
   border: 1px solid color-mix(in srgb, CanvasText 24%, Canvas) !important;
   border-radius: 10px !important;
-  background: Canvas !important;
-  color: CanvasText !important;
-  backdrop-filter: none !important;
+  /* Keep the theme's background, text colors, and transparency/blur settings. */
   box-shadow: 0 4px 18px rgb(0 0 0 / 25%) !important;
   transition: none !important;
 }
@@ -72,9 +70,6 @@
   width: 12rem !important;
   min-width: 0 !important;
   max-width: 100% !important;
-  background: Field !important;
-  color: FieldText !important;
-  backdrop-filter: none !important;
   border: 1px solid color-mix(in srgb, FieldText 35%, Field) !important;
 }
 

@@ -1,13 +1,13 @@
 # Find Bar Pane Fix
 
-Version **0.1.0** keeps the **Cmd+F / Ctrl+F** bar inside its own page pane.
-It uses a solid light/dark background, wraps controls in narrow panes, and fully
-hides closed find bars.
+Version **0.1.1** keeps the **Cmd+F / Ctrl+F** bar inside its own page pane.
+It preserves your theme's background and transparency settings, wraps controls
+in narrow panes, and fully hides closed find bars.
 
 This is a CSS mod. Finding text, match counts, navigation, and keyboard shortcuts
 continue to use Zen's native implementation. It can be used alongside Better
-Find Bar; its pane positioning and opaque colors override that mod's floating,
-transparent presentation.
+Find Bar; it corrects that mod's positioning while retaining its transparent
+background and blur when enabled.
 
 ## Install on macOS or Windows
 
