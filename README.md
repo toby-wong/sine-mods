@@ -12,7 +12,7 @@ through [Sine](https://github.com/CosmoCreeper/Sine).
 | [Tree Tabs Prototype](tree-tabs-prototype/) | 0.1.1 | Adds collapsible parent/child relationships to ordinary tabs. Moving a parent carries its descendants, including moves between Spaces. |
 | [Alt-click Split View — local fork](alt-click-split-view/) | 1.4.4-local | Opens Option/Alt-clicked links beside the current page while preserving the original document. Includes fixes for website routers, frames, Glance, pinned tabs, and Essentials. Based on Kostiantyn Kugot's mod. |
 | [Keyword Tab Search](keyword-tab-search/) | 0.1.0 | Activates an existing search keyword with Tab, including `keyword` for a saved `@keyword` alias, then uses native search mode. |
-| [Find Bar Pane Fix](findbar-pane-fix/) | 0.1.1 | Keeps Cmd/Ctrl+F inside its own page pane with wrapping controls in narrow splits, preserving theme transparency. |
+| [Find Bar Pane Fix](findbar-pane-fix/) | 0.1.2 | Keeps Cmd/Ctrl+F inside its pane with larger text, reduced transparency, and automatic black/white contrast. |
 
 All included projects are Sine mods. Other third-party mods from the original
 browser setup are not included.

@@ -2,14 +2,19 @@
 
 ## Current status
 
-- Version **0.1.1** is a CSS-only correction for floating find-bar clipping in
+- Version **0.1.2** is a CSS-only correction for floating find-bar clipping in
   Zen, including with Better Find Bar 1.7.1 enabled.
 - Anchors each bar to its own `.browserContainer`, bounds its width, wraps
-  controls, preserves theme backgrounds and transparency, and removes hidden
-  bars from layout.
-- Validation: eight browser checks passed on Zen 1.24b on macOS, covering
+  controls, uses the theme's background at 96% opacity, and removes hidden bars
+  from layout. Labels are 14px and the query is 15px.
+- Native `contrast-color()` selects black or white from the background color,
+  updating automatically with Space/theme changes. Older engines use a matching
+  system background/text pair. No JavaScript or page reload is needed.
+- Validation: eleven browser checks passed on Zen 1.24b on macOS, covering
   regular, split, narrow, and Glance layouts, match counts, Enter/Shift+Enter,
-  Escape, and stylesheet removal. Screenshots were visually inspected.
+  Escape, stylesheet removal, and live contrast changes across dark, light,
+  and olive backgrounds. Opacity, font sizes, and visible control bounds are
+  checked in each layout. Screenshots were visually inspected.
   Native Windows UI remains untested.
 
 ## Constraints and validation
@@ -18,15 +23,17 @@
 - Preserve native find logic, focus, counts, Enter/Shift+Enter, Escape, and
   selected-pane behavior. Do not move or duplicate find-bar DOM.
 - Do not patch Better Find Bar or change its stored preferences.
-- Preserve the user's transparency and blur settings. Normal bar/input
-  backgrounds and text colors belong to the existing theme; do not force
-  opaque fills. Retain clear feedback when a search has no matches.
+- The user requested reduced transparency, larger text, and automatic white
+  text on darker backgrounds. Keep some bar transparency and the existing blur;
+  the query field is solid for readability. Automatic text color takes priority
+  over a theme's fixed/custom text color. Retain clear no-match feedback.
 - Span the browser container's full grid: the native `findbar` grid area has
   zero height when the bar is absolutely positioned. Percentage height limits
   against that area collapse the bar even when its controls remain visible.
 - Check regular, split, narrow-pane, and Glance layouts with the existing mod
   enabled. Inspect screenshots as well as bounds, visible controls, and color.
-  Background and backdrop-filter must match the theme before this fix loads.
+  Check 96% opacity, 14px labels, 15px query text, and dynamic black/white
+  contrast on dark, light, and olive backgrounds. Keep the existing blur.
 - Exercise actual Cmd/Ctrl+F and Escape. Verify a hidden bar cannot overlay a
   neighboring pane, and that removing the stylesheet restores prior styling.
 - Use a disposable profile with loopback Marionette and

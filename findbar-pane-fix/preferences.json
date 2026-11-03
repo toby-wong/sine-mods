@@ -1,7 +1,7 @@
 [
   {
     "type": "text",
-    "label": "The find bar stays inside its page pane with wrapping controls, preserving your theme's background and transparency settings. Disable this mod in Sine to restore your previous layout.",
+    "label": "The find bar uses a 96% opaque background, larger text, and automatic black/white contrast. It keeps your theme's background color and blur while fitting inside each page pane. Disable this mod in Sine to restore your previous styling.",
     "size": "14px"
   }
 ]
