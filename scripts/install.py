@@ -33,6 +33,10 @@ MOD_FILES = {
         "profile-switcher.uc.js", "profile-switcher.css", "ExternalProfileRouting.sys.mjs",
     ),
     "window-sync-recovery": COMMON + ("window-sync-recovery.uc.js",),
+    "sine-sync": COMMON + (
+        "sine-sync.uc.js", "settings.uc.js", "SineSync.sys.mjs",
+        "sync-core.mjs", "sync-engine.mjs", "source-overrides.json",
+    ),
 }
 
 

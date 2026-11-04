@@ -16,6 +16,7 @@ through [Sine](https://github.com/CosmoCreeper/Sine).
 | [Ctrl Tab Theme](ctrl-tab-theme/) | 0.1.0 | Matches the native Ctrl+Tab switcher to Space colours, with rounded previews, readable titles, and a clear selection outline. |
 | [Profile Switcher](profile-switcher/) | 0.2.0 | Identifies and switches profiles with native controls. On macOS, optionally sends web links from other apps to a chosen profile. |
 | [Window Sync Recovery](window-sync-recovery/) | 0.1.0 | Clears stale faded snapshots once a single browser window owns the live pages again, without reloading them. |
+| [Sine Sync](sine-sync/) | 0.1.0 | Sends Sine mods and portable settings between computers, with configurable sender/receiver roles and separate Work/Personal channels. |
 
 All included projects are Sine mods. Other third-party mods from the original
 browser setup are not included.
@@ -101,6 +102,7 @@ installation field:
 | Ctrl Tab Theme | `https://github.com/toby-wong/sine-mods/tree/main/ctrl-tab-theme` |
 | Profile Switcher | `https://github.com/toby-wong/sine-mods/tree/main/profile-switcher` |
 | Window Sync Recovery | `https://github.com/toby-wong/sine-mods/tree/main/window-sync-recovery` |
+| Sine Sync | `https://github.com/toby-wong/sine-mods/tree/main/sine-sync` |
 
 Use the same steps on macOS and Windows. Restart Zen after installation.
 The repository root is a collection, not a single installable mod. Use the fork
@@ -159,6 +161,10 @@ must be new for each real installation. The installer:
 Restart Zen, check the mods are enabled in **Settings → Sine**, and configure
 them there. This installer does not install Sine, change the Zen application
 bundle or install Hammerspoon integrations.
+
+For cross-computer synchronization, see [Sine Sync](sine-sync/). It defaults to
+Off; choose matching Work/Personal channels and one sender before receiving on
+another computer. Its own installation is required on each participating profile.
 
 ### Optional Mac shortcuts
 

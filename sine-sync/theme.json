@@ -1,0 +1,26 @@
+{
+  "id": "sine-sync",
+  "name": "Sine Sync",
+  "description": "Send your Sine mods and portable settings to another computer using your Mozilla account.",
+  "version": "0.1.0",
+  "author": "Toby Wong",
+  "createdAt": "2026-11-04",
+  "updatedAt": "2026-11-04",
+  "homepage": "https://github.com/toby-wong/sine-mods/tree/main/sine-sync",
+  "readme": "https://raw.githubusercontent.com/toby-wong/sine-mods/main/sine-sync/README.md",
+  "fork": ["zen"],
+  "tags": ["sync", "settings", "profiles"],
+  "ai": "yes",
+  "scripts": {
+    "sine-sync.uc.js": {
+      "include": ["chrome://browser/content/browser.xhtml"],
+      "loadOrder": 100
+    },
+    "settings.uc.js": {
+      "include": ["about:preferences*"]
+    }
+  },
+  "style": {"chrome": "", "content": ""},
+  "preferences": "preferences.json",
+  "supportsUnload": true
+}

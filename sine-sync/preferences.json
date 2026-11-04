@@ -1,0 +1,60 @@
+[
+  {
+    "type": "dropdown",
+    "property": "uc.sine-sync.mode",
+    "label": "This computer",
+    "defaultValue": "off",
+    "placeholder": false,
+    "options": [
+      {"label": "Off", "value": "off"},
+      {"label": "Send only — use this setup on other computers", "value": "send"},
+      {"label": "Receive only — follow the sending computer", "value": "receive"}
+    ]
+  },
+  {
+    "type": "dropdown",
+    "property": "uc.sine-sync.channel",
+    "label": "Profile channel (match this on both computers)",
+    "defaultValue": "work",
+    "placeholder": false,
+    "options": [
+      {"label": "Work", "value": "work"},
+      {"label": "Personal", "value": "personal"}
+    ]
+  },
+  {
+    "type": "checkbox",
+    "property": "uc.sine-sync.settings",
+    "label": "Include portable mod settings",
+    "defaultValue": true
+  },
+  {
+    "type": "checkbox",
+    "property": "uc.sine-sync.enabled-states",
+    "label": "Receive mod on/off choices and disable mods removed by the sender",
+    "defaultValue": true
+  },
+  {
+    "type": "dropdown",
+    "property": "uc.sine-sync.interval",
+    "label": "Check the sending computer for changed mod files",
+    "defaultValue": "300",
+    "placeholder": false,
+    "options": [
+      {"label": "Every minute", "value": "60"},
+      {"label": "Every 5 minutes", "value": "300"},
+      {"label": "Every 15 minutes", "value": "900"}
+    ]
+  },
+  {
+    "type": "checkbox",
+    "property": "uc.sine-sync.local-relay",
+    "label": "Local relay: share outgoing channels with other opted-in profiles on this computer",
+    "defaultValue": false
+  },
+  {
+    "type": "separator",
+    "id": "sine-sync-controls",
+    "label": "Sync status"
+  }
+]

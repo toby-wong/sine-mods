@@ -1,0 +1,17 @@
+{
+  "little-zen": {
+    "homepage": "https://github.com/toby-wong/sine-mods/tree/main/little-zen"
+  },
+  "72f8f48d-86b9-4487-acea-eb4977b18f21": {
+    "homepage": "https://github.com/psu/zen-mods/tree/main/better-ctrl-tab",
+    "files": ["chrome.css", "preferences.json"],
+    "revisions": {
+      "1.0.1": "f41d62abce925c5dfbbc6dd829fcd81ab9ebad7a"
+    }
+  },
+  "advanced-tab-groups": {
+    "revisions": {
+      "3.10.0": "a6c43a2ae8c77324d562d770deb192a4fb01e42e"
+    }
+  }
+}
