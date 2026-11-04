@@ -1,0 +1,67 @@
+#profile-switcher-row {
+  display: flex;
+  flex: 0 0 auto;
+  min-width: 0;
+  padding: 3px 4px 6px;
+}
+
+#profile-switcher-button {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 6px 9px;
+  border: 1px solid color-mix(in srgb, var(--profile-switcher-colour) 35%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--profile-switcher-colour) 13%, transparent);
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  cursor: pointer;
+  -moz-window-dragging: no-drag;
+}
+
+#profile-switcher-button:hover,
+#profile-switcher-button[aria-expanded="true"] {
+  background: color-mix(in srgb, var(--profile-switcher-colour) 24%, transparent);
+}
+
+#profile-switcher-button:focus-visible {
+  outline: 2px solid var(--profile-switcher-colour);
+  outline-offset: 1px;
+}
+
+.profile-switcher-dot {
+  flex: 0 0 9px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--profile-switcher-colour);
+  box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 18%, transparent);
+}
+
+.profile-switcher-name {
+  flex: 1;
+  overflow: hidden;
+  text-align: start;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.profile-switcher-arrow {
+  flex: 0 0 auto;
+  font-size: 15px;
+}
+
+#profile-switcher-menu {
+  min-width: 200px;
+}
+
+:root[inDOMFullscreen="true"] #profile-switcher-row {
+  display: none;
+}

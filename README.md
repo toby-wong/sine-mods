@@ -14,6 +14,7 @@ through [Sine](https://github.com/CosmoCreeper/Sine).
 | [Keyword Tab Search](keyword-tab-search/) | 0.1.2 | Activates an existing search keyword with Tab, including `keyword` for a saved `@keyword` alias, and keeps searches in a pending split pane. |
 | [Find Bar Pane Fix](findbar-pane-fix/) | 0.1.4 | Keeps Cmd/Ctrl+F inside its pane, with configurable styling and optional scaling with page zoom. |
 | [Ctrl Tab Theme](ctrl-tab-theme/) | 0.1.0 | Matches the native Ctrl+Tab switcher to Space colours, with rounded previews, readable titles, and a clear selection outline. |
+| [Profile Switcher](profile-switcher/) | 0.1.0 | Shows the current profile in the sidebar and window title, with a menu to activate or launch another profile. |
 
 All included projects are Sine mods. Other third-party mods from the original
 browser setup are not included.
@@ -55,6 +56,10 @@ browser behavior has **not** been tested.
 - **Ctrl Tab Theme:** use **Control+Tab** on both Mac and Windows. Keeps native
   switching behaviour and works alongside Better CtrlTab Panel. Configure
   opacity and title size in **Settings → Sine Mods → Ctrl Tab Theme → Configure**.
+- **Profile Switcher:** click the named button above your tabs to switch profile
+  windows. The colour and window-title label are configurable. Install Sine and
+  the mod separately in each profile. Native process activation and launch have
+  been tested on macOS; Windows/Linux desktop activation remains untested.
 
 ## Install the Sine mods
 
@@ -87,6 +92,7 @@ installation field:
 | Keyword Tab Search | `https://github.com/toby-wong/sine-mods/tree/main/keyword-tab-search` |
 | Find Bar Pane Fix | `https://github.com/toby-wong/sine-mods/tree/main/findbar-pane-fix` |
 | Ctrl Tab Theme | `https://github.com/toby-wong/sine-mods/tree/main/ctrl-tab-theme` |
+| Profile Switcher | `https://github.com/toby-wong/sine-mods/tree/main/profile-switcher` |
 
 Use the same steps on macOS and Windows. Restart Zen after installation.
 The repository root is a collection, not a single installable mod. Use the fork
@@ -198,11 +204,13 @@ validation requirements, and proposed future directions:
 - [Alt-click Split View](alt-click-split-view/AGENTS.md)
 - [Keyword Tab Search](keyword-tab-search/AGENTS.md)
 - [Find Bar Pane Fix](findbar-pane-fix/AGENTS.md)
+- [Profile Switcher](profile-switcher/AGENTS.md)
 
 ```sh
 python3 -m unittest discover -s tests -v
 node --test alt-click-split-view/tests/alt-click-split-view.test.cjs
 node --test keyword-tab-search/tests/keyword-tab-search.test.cjs
+node --test profile-switcher/tests/profile-switcher.test.cjs
 ```
 
 The browser integration scripts inside the mod directories require a separately
@@ -228,8 +236,8 @@ browser; install the chosen files separately.
 
 ## Credits
 
-Little Zen, Auto Glance, Tree Tabs Prototype, Keyword Tab Search, and Find Bar
-Pane Fix are local customizations
+Little Zen, Auto Glance, Tree Tabs Prototype, Keyword Tab Search, Find Bar
+Pane Fix, and Profile Switcher are local customizations
 created for this collection. Tree Tabs' scope was informed by
 [Zen Bonsai](https://github.com/joegoldin/zen-bonsai-browser).
 

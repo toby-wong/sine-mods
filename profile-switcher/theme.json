@@ -1,0 +1,23 @@
+{
+  "id": "profile-switcher",
+  "name": "Profile Switcher",
+  "description": "Identify the current profile and activate or open another profile window.",
+  "version": "0.1.0",
+  "author": "Toby Wong",
+  "createdAt": "2026-11-03",
+  "updatedAt": "2026-11-03",
+  "homepage": "https://github.com/toby-wong/sine-mods/tree/main/profile-switcher",
+  "readme": "https://raw.githubusercontent.com/toby-wong/sine-mods/main/profile-switcher/README.md",
+  "fork": ["zen"],
+  "tags": ["profiles", "navigation", "sidebar"],
+  "ai": "yes",
+  "scripts": {
+    "profile-switcher.uc.js": {
+      "include": ["chrome://browser/content/browser.xhtml"],
+      "loadOrder": 90
+    }
+  },
+  "style": {"chrome": "profile-switcher.css", "content": ""},
+  "preferences": "preferences.json",
+  "supportsUnload": true
+}

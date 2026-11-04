@@ -1,0 +1,29 @@
+[
+  {
+    "type": "text",
+    "label": "The sidebar button identifies this profile and opens a menu for switching profiles. Names come from Manage profiles. Changes below apply immediately.",
+    "size": "14px"
+  },
+  {
+    "property": "uc.profile-switcher.colour",
+    "label": "Profile colour",
+    "type": "dropdown",
+    "defaultValue": "auto",
+    "placeholder": false,
+    "options": [
+      {"label": "Automatic", "value": "auto"},
+      {"label": "Blue", "value": "blue"},
+      {"label": "Purple", "value": "purple"},
+      {"label": "Green", "value": "green"},
+      {"label": "Orange", "value": "orange"},
+      {"label": "Pink", "value": "pink"},
+      {"label": "Teal", "value": "teal"}
+    ]
+  },
+  {
+    "property": "uc.profile-switcher.show-in-title",
+    "label": "Include the profile name in window titles",
+    "type": "checkbox",
+    "defaultValue": true
+  }
+]

@@ -29,6 +29,7 @@ MOD_FILES = {
     "keyword-tab-search": COMMON + ("keyword-tab-search.uc.js",),
     "findbar-pane-fix": COMMON + ("findbar.css", "findbar-zoom.uc.js"),
     "ctrl-tab-theme": COMMON + ("ctrl-tab.css",),
+    "profile-switcher": COMMON + ("profile-switcher.uc.js", "profile-switcher.css"),
 }
 
 
