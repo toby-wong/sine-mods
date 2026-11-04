@@ -124,7 +124,9 @@ listed in that backup's receipt. Preserve unrelated newer registrations.
 
 ## Limits and validation
 
-- Both profiles must run Zen with Sine, use the same account and enable Settings sync.
+- Direct sender/receiver pairs must run Zen with Sine, use the same account and
+  enable Settings sync. With local relay, the relaying profile handles account
+  sync; the source profile can leave browser Sync unconfigured.
 - Only public GitHub mod sources are supported. Custom chrome manifests,
   symlinks and Windows-incompatible filenames stop publication.
 - Payloads are capped at 64 KiB per channel; files are capped at 5 MiB each,
