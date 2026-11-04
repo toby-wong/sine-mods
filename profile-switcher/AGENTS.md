@@ -2,7 +2,7 @@
 
 ## Current status
 
-- Version **0.2.1** identifies the current profile in the sidebar and window title.
+- Version **0.2.2** identifies the current profile in the sidebar and window title.
 - The control uses Zen's native dropdown SVG, button tokens, and focus outline.
   The popup lists registered profiles, external-link destinations, and `about:profiles`.
 - The button uses the sidebar's `--border-radius-medium` and the address bar's
@@ -20,10 +20,15 @@
   activation/launch. This method uses only the path; enabling or migrating to
   Firefox's separate selectable-profile database is not required.
 - Validation on Zen 1.24b/macOS: 18 Node tests, nine shared-installer tests,
-  25 browser UI/lifecycle checks, and eight native routing checks passed. These cover profile path identity,
+  28 browser UI/lifecycle checks, and eight native routing checks passed. These cover profile path identity,
   keyboard/menu actions, colours, title changes, stale selections, child document
   unload, hot reload, preserved tabs/documents, later title wrappers, native
   cross-process URL delivery, fallback, and Sine's process/window unload paths.
+- The 0.2.2 checkmark regression fails with the previous implementation and
+  passes after the fix. UI checks cover the painted macOS checkmarks, selecting
+  a destination, reopening the menu, and returning to normal routing. Live Work
+  and Personal menus each showed one current profile and one destination,
+  preserving the routing preference, saved tabs, and other mod controllers.
 - Native launch of a closed disposable profile with a URL also passed. The
   control was visually checked with native light/dark colour tokens and narrow
   widths. Two OS-delivered links reached the configured destination with each
@@ -59,6 +64,10 @@
   pending requests once if unloaded or reconfigured during profile discovery.
 - Keep UI outside the native tab strip's child list. The row belongs before
   `TabsToolbar`, not among tab, split, group, or Essential nodes.
+- Set `checked="true"` only on selected menu items. Unselected items must omit
+  `checked`: Zen's native menu CSS uses `[checked]`, so `"false"` still draws a
+  tick. Verify exactly one selection in each menu, including after changing the
+  external destination and returning to normal routing.
 - Wrap native title generation without dropping page titles or private labels.
   Restore only a wrapper still owned by this instance and keep retained
   wrappers inert after unload.

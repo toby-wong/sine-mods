@@ -2,7 +2,7 @@
   "id": "profile-switcher",
   "name": "Profile Switcher",
   "description": "Identify the current profile and activate or open another profile window.",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "author": "Toby Wong",
   "createdAt": "2026-11-03",
   "updatedAt": "2026-11-04",

@@ -1,6 +1,6 @@
 # Profile Switcher
 
-Version **0.2.1** adds a profile button above Zen's tabs. It shows the current
+Version **0.2.2** adds a profile button above Zen's tabs. It shows the current
 profile name and a colour marker. Window titles also include the name, making
 profiles identifiable in the operating system's window list.
 
@@ -12,6 +12,8 @@ identifies the profile while the rest of the control follows the browser theme.
 Click the button and choose a profile to activate its existing window or launch
 it if closed. Your current profile stays open. **Manage profiles…** opens Zen's
 native `about:profiles` page for creating and renaming profiles.
+Only the current profile is ticked; the **Links from other apps** submenu
+separately ticks the selected destination.
 
 When launching a closed profile, its startup setting controls which tabs return.
 Enable **Open previous windows and tabs** in each profile to restore ordinary

@@ -72,6 +72,7 @@ def run(args):
           await ProfileSwitcher.ready;
           Services.prefs.setStringPref("uc.profile-switcher.colour","blue");
           Services.prefs.setBoolPref("uc.profile-switcher.show-in-title",true);
+          Services.prefs.setStringPref("uc.profile-switcher.external-profile","");
           return true;
         """, [str(actual), str(args.other_profile.resolve())])
         check("current_profile_named", m.js("return ProfileSwitcher.current.name==='Test Work';"))
@@ -97,7 +98,12 @@ def run(args):
         check("current_profile_marked", m.js("""
           const items=[...document.querySelectorAll(".profile-switcher-item")];
           return items.length===2 && items[0].getAttribute("checked")==="true" &&
-            items[0].disabled && items[1].getAttribute("label")==="Test Personal";
+            items[0].disabled && items[1].getAttribute("label")==="Test Personal" &&
+            items.filter(item=>item.hasAttribute("checked")).length===1;
+        """))
+        check("normal_routing_is_only_initial_destination_marked", m.js("""
+          const selected=[...document.querySelectorAll(".profile-switcher-external-destination[checked]")];
+          return selected.length===1 && selected[0].getAttribute("data-profile-path")==="";
         """))
         m.js("""
           const menu=document.getElementById("profile-switcher-external-links");
@@ -105,6 +111,15 @@ def run(args):
           window.__externalPopup.openPopup(menu,"end_before");
         """)
         wait("window.__externalPopup.state==='open'")
+        if m.js("return Services.appinfo.OS;") == "Darwin":
+            check("only_selected_items_render_native_checkmarks", m.js("""
+              for(const selector of [".profile-switcher-item", ".profile-switcher-external-destination"]) {
+                const items=[...document.querySelectorAll(selector)];
+                const marked=items.filter(item=>getComputedStyle(item,"::before").visibility==="visible");
+                if(marked.length!==1 || !marked[0].hasAttribute("checked")) return false;
+              }
+              return true;
+            """))
         m.js("window.__externalPopup.hidePopup();")
         wait("window.__externalPopup.state==='closed'")
         check("closing_submenu_keeps_button_expanded", m.js("""
@@ -123,14 +138,21 @@ def run(args):
         m.async_js("await ProfileSwitcher.openMenu();return true;")
         wait("document.getElementById('profile-switcher-menu').state==='open'")
         check("external_destination_selection_persists", m.js("""
-          return [...document.querySelectorAll(".profile-switcher-external-destination")]
-            .find(item=>item.getAttribute("data-profile-path")===arguments[0]).getAttribute("checked")==="true";
+          const selected=[...document.querySelectorAll(".profile-switcher-external-destination[checked]")];
+          return selected.length===1 && selected[0].getAttribute("data-profile-path")===arguments[0];
         """, [str(args.other_profile.resolve())]))
         m.js("""
           document.querySelector('.profile-switcher-external-destination[data-profile-path=""]').doCommand();
         """)
         check("normal_external_routing_can_be_restored", m.js("""
           return Services.prefs.getStringPref("uc.profile-switcher.external-profile")==="";
+        """))
+        close_menu()
+        m.async_js("await ProfileSwitcher.openMenu();return true;")
+        wait("document.getElementById('profile-switcher-menu').state==='open'")
+        check("normal_routing_is_only_restored_destination_marked", m.js("""
+          const selected=[...document.querySelectorAll(".profile-switcher-external-destination[checked]")];
+          return selected.length===1 && selected[0].getAttribute("data-profile-path")==="";
         """))
         screenshot = m.command("WebDriver:TakeScreenshot", {"full": False})
         args.report.with_suffix(".png").write_bytes(base64.b64decode(screenshot))

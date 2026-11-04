@@ -1,5 +1,5 @@
 // Native profile discovery and optional macOS external-link routing.
-const VERSION = "0.2.1";
+const VERSION = "0.2.2";
 const TARGET_PREF = "uc.profile-switcher.external-profile";
 const MODULE_URI = "chrome://sine/content/profile-switcher/ExternalProfileRouting.sys.mjs";
 const HOOK = "__profileSwitcherExternalRouting";

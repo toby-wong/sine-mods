@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name           Profile Switcher
-// @version        0.2.1
+// @version        0.2.2
 // @description    Identify the current Zen profile and switch profile windows.
 // @include        chrome://browser/content/browser.xhtml
 // ==/UserScript==
 
 (() => {
   "use strict";
-  const VERSION = "0.2.1";
+  const VERSION = "0.2.2";
   const PREFIX = "uc.profile-switcher.";
   const ROUTING_MODULE = `chrome://sine/content/profile-switcher/ExternalProfileRouting.sys.mjs?v=${VERSION}`;
   const COLOURS = Object.freeze({
@@ -131,7 +131,8 @@
         item.setAttribute("label", profile.name + (profile.current ? " (current)" : ""));
         item.setAttribute("type", "radio");
         item.setAttribute("name", "profile-switcher-profile");
-        item.setAttribute("checked", String(profile.current));
+        // Native menu styling checks attribute presence, including "false".
+        if (profile.current) item.setAttribute("checked", "true");
         item.setAttribute("data-profile-path", profile.path);
         item.setAttribute("tooltiptext", profile.name);
         if (profile.current) item.setAttribute("disabled", "true");
@@ -154,7 +155,7 @@
         item.setAttribute("label", profile.name);
         item.setAttribute("type", "radio");
         item.setAttribute("name", "profile-switcher-external-profile");
-        item.setAttribute("checked", String(profile.path === target));
+        if (profile.path === target) item.setAttribute("checked", "true");
         item.setAttribute("data-profile-path", profile.path);
         item.addEventListener("command", () =>
           env.prefs.setStringPref(PREFIX + "external-profile", profile.path));
