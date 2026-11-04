@@ -1,0 +1,23 @@
+{
+  "id": "window-sync-recovery",
+  "name": "Window Sync Recovery",
+  "description": "Restore live pages left behind faded window-sync snapshots after other windows close.",
+  "version": "0.1.0",
+  "author": "Toby Wong",
+  "createdAt": "2026-11-04",
+  "updatedAt": "2026-11-04",
+  "homepage": "https://github.com/toby-wong/sine-mods/tree/main/window-sync-recovery",
+  "readme": "https://raw.githubusercontent.com/toby-wong/sine-mods/main/window-sync-recovery/README.md",
+  "fork": ["zen"],
+  "tags": ["windows", "tabs"],
+  "ai": "yes",
+  "scripts": {
+    "window-sync-recovery.uc.js": {
+      "include": ["chrome://browser/content/browser.xhtml"],
+      "loadOrder": 95
+    }
+  },
+  "style": {"chrome": "", "content": ""},
+  "preferences": "preferences.json",
+  "supportsUnload": true
+}

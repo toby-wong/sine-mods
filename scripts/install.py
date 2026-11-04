@@ -32,6 +32,7 @@ MOD_FILES = {
     "profile-switcher": COMMON + (
         "profile-switcher.uc.js", "profile-switcher.css", "ExternalProfileRouting.sys.mjs",
     ),
+    "window-sync-recovery": COMMON + ("window-sync-recovery.uc.js",),
 }
 
 

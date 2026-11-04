@@ -15,6 +15,7 @@ through [Sine](https://github.com/CosmoCreeper/Sine).
 | [Find Bar Pane Fix](findbar-pane-fix/) | 0.1.4 | Keeps Cmd/Ctrl+F inside its pane, with configurable styling and optional scaling with page zoom. |
 | [Ctrl Tab Theme](ctrl-tab-theme/) | 0.1.0 | Matches the native Ctrl+Tab switcher to Space colours, with rounded previews, readable titles, and a clear selection outline. |
 | [Profile Switcher](profile-switcher/) | 0.2.0 | Identifies and switches profiles with native controls. On macOS, optionally sends web links from other apps to a chosen profile. |
+| [Window Sync Recovery](window-sync-recovery/) | 0.1.0 | Clears stale faded snapshots once a single browser window owns the live pages again, without reloading them. |
 
 All included projects are Sine mods. Other third-party mods from the original
 browser setup are not included.
@@ -63,6 +64,9 @@ browser behavior has **not** been tested.
   apps** submenu to choose an external-link destination for each profile.
   Native process activation and launch have
   been tested on macOS; Windows/Linux desktop activation remains untested.
+- **Window Sync Recovery:** automatically clears stale native snapshots when
+  only one browser window remains in a profile. It preserves the live document
+  and leaves genuine previews alone while multiple windows are open.
 
 ## Install the Sine mods
 
@@ -96,6 +100,7 @@ installation field:
 | Find Bar Pane Fix | `https://github.com/toby-wong/sine-mods/tree/main/findbar-pane-fix` |
 | Ctrl Tab Theme | `https://github.com/toby-wong/sine-mods/tree/main/ctrl-tab-theme` |
 | Profile Switcher | `https://github.com/toby-wong/sine-mods/tree/main/profile-switcher` |
+| Window Sync Recovery | `https://github.com/toby-wong/sine-mods/tree/main/window-sync-recovery` |
 
 Use the same steps on macOS and Windows. Restart Zen after installation.
 The repository root is a collection, not a single installable mod. Use the fork
@@ -208,6 +213,7 @@ validation requirements, and proposed future directions:
 - [Keyword Tab Search](keyword-tab-search/AGENTS.md)
 - [Find Bar Pane Fix](findbar-pane-fix/AGENTS.md)
 - [Profile Switcher](profile-switcher/AGENTS.md)
+- [Window Sync Recovery](window-sync-recovery/AGENTS.md)
 
 ```sh
 python3 -m unittest discover -s tests -v
@@ -240,7 +246,7 @@ browser; install the chosen files separately.
 ## Credits
 
 Little Zen, Auto Glance, Tree Tabs Prototype, Keyword Tab Search, Find Bar
-Pane Fix, and Profile Switcher are local customizations
+Pane Fix, Profile Switcher, and Window Sync Recovery are local customizations
 created for this collection. Tree Tabs' scope was informed by
 [Zen Bonsai](https://github.com/joegoldin/zen-bonsai-browser).
 
