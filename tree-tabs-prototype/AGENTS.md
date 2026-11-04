@@ -2,13 +2,17 @@
 
 ## Current status
 
-- Source baseline: **0.1.1**. Ordinary tabs support opener-based nesting,
+- Source baseline: **0.1.2**. Ordinary tabs support opener-based nesting,
   collapse/expand, menu-based nesting/outdenting, and session-persisted tree state.
 - Moving a parent carries its entire branch in sidebar order and across Spaces.
   Nested branch moves detach the moved root; parent/child multi-selection retains
   the relationship. Closing a parent promotes its children.
 - Pinned tabs, Essentials, native groups, split views, Glance, private windows,
   and Little Zen windows are deliberately outside the current tree.
+- A Glance promoted with **Expand to new tab** becomes a child of its ordinary
+  originating tab when automatic nesting is enabled. Capture the native parent
+  before promotion clears its metadata, then nest after native completion.
+  Existing siblings, nested ancestry, drafts, and live documents are preserved.
 - The **0.2.0 split-session experiment was reverted after split rows disappeared**.
   Its tests had passed, so they were insufficient to establish correctness.
   Do not restore that implementation as if it were a working feature.
@@ -25,6 +29,10 @@
   attribute changes. Preserve that ordering and multi-selection handling.
 - Native opener information drives automatic nesting. New-tab commands,
   bookmarks, and external links are roots unless a real page opener exists.
+- The `fullyOpenGlance` wrapper must skip `{forSplit:true}`, preserve native
+  arguments/results/errors, and restore only its own wrapper. Recheck eligibility
+  and settings after awaiting native completion; an unloaded instance must not
+  perform a late attachment.
 - SessionStore relationships must survive restart. Disabling the mod restores a
   flat sidebar without closing pages; collapsing does not unload documents.
 - Keep controller/manifest versions and the shared installer's CSS/controller
@@ -39,9 +47,10 @@ localhost (default port `2832`), run:
 ```sh
 python3 tree-tabs-prototype/tests/integration.py --profile /path/to/test-profile --report /path/to/reports/tree.json
 python3 tree-tabs-prototype/tests/branch_moves.py --profile /path/to/test-profile --report /path/to/reports/branches.json
+python3 tree-tabs-prototype/tests/glance_promotion.py --profile /path/to/test-profile --report /path/to/reports/promotion.json
 ```
 
-Both suites verify the connected profile. Also run Auto Glance integration after
+All three suites verify the connected profile. Also run Auto Glance integration after
 opener/click changes, and check restart restoration after persistence changes.
 The recorded branch-move suite exercises a synthesized native drop; macOS pointer
 automation did not reliably deliver a physical drop. Confirm actual dragging and

@@ -103,6 +103,9 @@ def run(args):
           Services.prefs.setBoolPref("uc.tree-tabs.auto-nest",true);
           Services.prefs.setBoolPref("uc.auto-glance.enabled",true);
           Services.prefs.setBoolPref("uc.auto-glance.cmd-click-background",true);
+          Services.prefs.setBoolPref("uc.alt-click-split-view.enabled",true);
+          Services.prefs.setStringPref("uc.alt-click-split-view.trigger","alt");
+          Services.prefs.setStringPref("zen.glance.activation-method","shift");
           window.ttRoot=gBrowser.addTrustedTab(arguments[0]+"/root",{inBackground:false});
           for(const tab of [...gZenWorkspaces.allStoredTabs]){
             if(tab!==ttRoot&&!tab.hasAttribute("zen-empty-tab"))

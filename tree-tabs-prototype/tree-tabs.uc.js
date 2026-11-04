@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name           Tree Tabs Prototype
-// @version        0.1.1
+// @version        0.1.2
 // @description    Parent and child tabs in Zen's existing sidebar.
 // @include        chrome://browser/content/browser.xhtml
 // ==/UserScript==
@@ -387,6 +387,41 @@
     cleanups.push(() => target.removeEventListener(type, handler, options));
   }
 
+  function installGlancePromotion() {
+    const manager = window.gZenGlanceManager;
+    if (typeof manager?.fullyOpenGlance !== "function" ||
+        typeof manager.getFocusedTab !== "function") return;
+    const original = manager.fullyOpenGlance;
+    const descriptor = Object.getOwnPropertyDescriptor(manager, "fullyOpenGlance");
+    const autoNest = () => enabled() &&
+      Services.prefs.getBoolPref(PREFIX + "auto-nest", true);
+    const promote = async function (...args) {
+      // Native promotion removes Glance's parent markers before its animation
+      // finishes. Capture the actual source while the preview still owns them.
+      const tab = this === manager && autoNest() && !args[0]?.forSplit
+        ? manager.getFocusedTab(1) : null;
+      const parent = tab?.hasAttribute("zen-glance-tab")
+        ? manager.getFocusedTab(-1) : null;
+      const result = await original.apply(this, args);
+      // Split promotion has its own membership/layout; ordinary promotion can
+      // join the tree only after the native browser move has completed.
+      if (parent && autoNest() && eligible(tab) && eligible(parent) &&
+          tab.ownerDocument === document && parent.ownerDocument === document) {
+        try {
+          pendingParents.delete(tab);
+          nest(tab, parent);
+        } catch (error) { report(error); }
+      }
+      return result;
+    };
+    manager.fullyOpenGlance = promote;
+    cleanups.push(() => {
+      if (manager.fullyOpenGlance !== promote) return;
+      if (descriptor) Object.defineProperty(manager, "fullyOpenGlance", descriptor);
+      else delete manager.fullyOpenGlance;
+    });
+  }
+
   function installMenu() {
     const parentMenu = document.getElementById("tabContextMenu");
     if (!parentMenu) return;
@@ -455,7 +490,7 @@
     }
     const style = document.createElementNS("http://www.w3.org/1999/xhtml", "link");
     style.rel = "stylesheet";
-    style.href = "chrome://sine/content/tree-tabs-prototype/tree-tabs.css?v=0.1.1";
+    style.href = "chrome://sine/content/tree-tabs-prototype/tree-tabs.css?v=0.1.2";
     document.documentElement.append(style);
     cleanups.push(() => style.remove());
 
@@ -500,6 +535,7 @@
     const prefObserver = { observe: () => schedule() };
     Services.prefs.addObserver(PREFIX, prefObserver);
     cleanups.push(() => Services.prefs.removeObserver(PREFIX, prefObserver));
+    installGlancePromotion();
     installMenu();
     reconcile();
     api.status = "ready";
@@ -521,7 +557,7 @@
   }
 
   const api = window.TreeTabs = {
-    version: "0.1.1", status: "starting", reconciliations: 0, lastReconcileMs: 0,
+    version: "0.1.2", status: "starting", reconciliations: 0, lastReconcileMs: 0,
     nest, outdent, toggleCollapse, expandAll, destroy,
     parentOf: tab => nodes.get(tab)?.parent?.tab || null,
     depthOf: tab => depth(nodes.get(tab)),

@@ -7,6 +7,9 @@ Zen's existing sidebar.
 
 - **Command-click a link in an ordinary tab:** the new background tab becomes
   a child of the source tab.
+- **Expand a Glance to a new tab:** with automatic nesting enabled, the promoted
+  tab becomes a child of its originating ordinary tab, after existing children.
+  Both pages retain their live state. A collapsed parent expands to reveal it.
 - **Click the arrow beside a parent tab:** collapse or expand its descendants.
   Collapsing the branch containing the selected tab selects its parent.
 - **Select a hidden child through a shortcut:** its ancestors expand.
@@ -29,9 +32,10 @@ groups, split views, and Glance previews remain outside the tree. Private and
 Little Zen windows are also outside this prototype.
 
 The existing Auto Glance and Option-click split behavior remains available.
-In particular, an ordinary website-created Glance is not converted into a
-child tab; Command-click's background-tab override is the usual way to create
-children.
+A Glance preview stays outside the tree while it is a preview. Expanding it
+to a normal tab can attach it to its ordinary source tab. Using Glance's
+**Split** button preserves native split membership and does not attach a tree
+child. Pinned, grouped, and split source tabs remain excluded.
 
 Dragging/reordering a nested parent detaches that branch from its former
 parent and carries its descendants with it. Selecting both a parent and a child
@@ -89,6 +93,11 @@ run with Tree Tabs enabled.
 `tests/branch_moves.py` checks branch order, nested and collapsed branches,
 multi-tab moves, Space menu moves, late workspace attribute changes, page and
 selection preservation, and Zen's native drop handler and animation cleanup.
+
+`tests/glance_promotion.py` exercises the native Expand command, nested and
+collapsed origins, sibling order, draft/document preservation, native split
+promotion, excluded origins, settings, saved relationships, and unloading
+while a promotion is in flight.
 
 `tests/integration.py` refuses to operate unless the browser's active profile
 matches the supplied disposable `test-profile` path.

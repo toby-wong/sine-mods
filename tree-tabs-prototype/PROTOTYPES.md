@@ -1,6 +1,6 @@
 # Prototype history
 
-The active version is **0.1.1**. Split sessions use Zen's normal sidebar
+The active version is **0.1.2**. Split sessions use Zen's normal sidebar
 behavior and do not participate in the prototype's tree.
 
 The repository was created after the first two prototypes were deployed.
@@ -14,6 +14,7 @@ recorded, not the original deployment times.
 | `tree-tabs-prototype/prototype/v0.2.0` | Split-session experiment, rolled back after the user reported missing split tabs. |
 | `tree-tabs-prototype/prototype/v0.1.0-restored` | Restored ordinary-tab prototype, with the split-session change reverted. |
 | `tree-tabs-prototype/prototype/v0.1.1` | Whole branches follow sidebar moves and moves between Spaces. |
+| `tree-tabs-prototype/prototype/v0.1.2` | Expanded Glances become children of their originating ordinary tabs. |
 
 The v0.2.0 automated tests and installation checks passed, but did not catch
 the subsequent user-visible problem. Its root cause has not been established.
@@ -68,3 +69,18 @@ Checking out or reverting a commit does not by itself change the running
 browser. Install the chosen source into the profile's Sine mod directory and
 reload the mod safely. Do not modify the signed Zen application or replace
 the whole browser profile to roll back a code change.
+
+## v0.1.2 validation
+
+The Glance promotion update passed 21 focused promotion checks, 25 existing Tree
+Tabs checks, 17 branch-move checks, and 31 Auto Glance checks in a disposable Zen
+1.24b profile on macOS. These cover the native Expand command, existing sibling
+order, nested/collapsed origins, unchanged drafts and document identities,
+excluded origins, visible native split groups and panes, settings, saved
+relationships, and unloading during promotion.
+
+The update was installed in two existing profiles. Live checks preserved the
+existing tabs, documents, tree relationships, Spaces, split layouts, and other
+mod instances, with native split rows still visible. Backups and reports remain
+outside Git. This update does not change the persistence schema or reintroduce
+the reverted split-session tree experiment.
