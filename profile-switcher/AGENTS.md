@@ -2,15 +2,24 @@
 
 ## Current status
 
-- Version **0.1.0** identifies the current profile in the sidebar and window title.
-- The native popup lists registered profiles and links to `about:profiles`.
+- Version **0.2.0** identifies the current profile in the sidebar and window title.
+- The control uses Zen's native dropdown SVG, button tokens, and focus outline.
+  The popup lists registered profiles, external-link destinations, and `about:profiles`.
+- Optional macOS routing sends external HTTP/HTTPS links to a configured profile.
+  The process handler survives closing the last window without retaining DOM
+  windows. Internal navigation and explicit private-window commands stay native.
 - Uses `SelectableProfileService.launchInstance({ path })` for native process
   activation/launch. This method uses only the path; enabling or migrating to
   Firefox's separate selectable-profile database is not required.
-- Validation on Zen 1.24b/macOS: eight Node tests, nine shared-installer tests,
-  and 21 browser UI/lifecycle checks passed. These cover profile path identity,
+- Validation on Zen 1.24b/macOS: 18 Node tests, nine shared-installer tests,
+  25 browser UI/lifecycle checks, and eight native routing checks passed. These cover profile path identity,
   keyboard/menu actions, colours, title changes, stale selections, child document
-  unload, hot reload, preserved tabs/documents, and later title wrappers.
+  unload, hot reload, preserved tabs/documents, later title wrappers, native
+  cross-process URL delivery, fallback, and Sine's process/window unload paths.
+- Native launch of a closed disposable profile with a URL also passed. The
+  control was visually checked with native light/dark colour tokens and narrow
+  widths. Two OS-delivered links reached the configured destination with each
+  of the two real profile applications active in turn; test tabs were removed.
 - Two disposable processes exercised the native activation command in both
   directions, preserving each process's window count, tabs, and selection.
   Native launch of a closed disposable profile also passed with the complete
@@ -18,7 +27,8 @@
 - Startup checks in two existing macOS profiles also passed with all 14 installed
   mods, distinct profile colours, and preserved tab IDs, Spaces, folders, tree
   metadata, and split groups after restoring their saved sessions.
-- Windows/Linux desktop activation has not been tested.
+- Windows/Linux desktop activation has not been tested. External-link routing
+  is currently macOS-only, and its submenu is disabled on those platforms.
 
 ## Constraints
 
@@ -26,8 +36,19 @@
   groups, or call methods that migrate data just to show or launch a profile.
 - Use the exact registered path. Names can collide or change, and profile
   service objects can become stale across processes. Refresh before switching.
-- Never send the current URL, private page content, or credentials to another
-  profile. Leave the current window and session open.
+- Profile switching never sends the current page, private content, or credentials.
+  External routing forwards only the URLs explicitly received in macOS's
+  `STATE_REMOTE_EXPLICIT` / `-url` request shape, after HTTP/HTTPS validation.
+  Skip the current destination, permanent private browsing, and disabled Sine
+  JavaScript/mods. Revalidate the destination path before launching it.
+- `ExternalProfileRouting.sys.mjs` owns the process hook and native profile I/O.
+  `CommandLineHandler.handle` is the entry point; `CommandLineHandler.openUrls`
+  supplies the native fallback. `SelectableProfileService.launchInstance`
+  activates/launches the destination. Do not migrate selectable-profile groups.
+- Register the module's Sine unload callback with a null window. Window closure
+  must not remove the process hook; disabling the mod must remove it. Keep
+  callbacks free of DOM references, restore only owned wrappers, and replay
+  pending requests once if unloaded or reconfigured during profile discovery.
 - Keep UI outside the native tab strip's child list. The row belongs before
   `TabsToolbar`, not among tab, split, group, or Essential nodes.
 - Wrap native title generation without dropping page titles or private labels.
@@ -37,6 +58,9 @@
   and discard pending async results after removal.
 - Preserve existing profile colours, preferences, loaders, and unrelated mods
   during installation. Never modify the signed Zen application.
+- A running macOS profile can have no windows. Temporary setup windows can
+  restore or synchronize existing tabs; preserve those tabs and clean up only
+  exact, known setup URLs. Keep session backups and reports outside Git.
 - Zen 1.24b filters ordinary tabs at startup unless `browser.startup.page` is `3`;
   Firefox's `browser.sessionstore.resume_session_once` alone does not prevent that
   filter. The switcher respects startup settings. Before a user-authorized
@@ -53,13 +77,18 @@
 - Marionette's system sandbox can retain bindings; use explicit `window.*`
   references for mutable fixture state and function-identity assertions.
 
-Run `node --test profile-switcher/tests/profile-switcher.test.cjs` from the
-collection root. `tests/integration.py` accepts `--profile`, `--other-profile`,
+Run `node --test profile-switcher/tests/*.test.*` from the collection root.
+`tests/integration.py` accepts `--profile`, `--other-profile`,
 `--port`, and `--report`. Its UI checks record launch requests instead of opening
-real profiles. Keep process-launch reports and screenshots outside the checkout.
+real profiles. `tests/external_routing.py` additionally takes `--other-port` and
+exercises native URL commands between two disposable processes. Its injected
+catalogue and launch guard contain only those test paths.
+Keep process-launch reports and screenshots outside the checkout.
 
 ## Potential future direction
 
 - Validate Windows/Linux desktop profile activation and accessibility.
+- Define and validate external URL command shapes before adding Windows/Linux
+  routing. Keep explicit private/profile commands and browser navigation intact.
 - Consider a keyboard shortcut if the user requests one.
 - Adapt the catalogue when Zen adopts Firefox's selectable-profile groups.

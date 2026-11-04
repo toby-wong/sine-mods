@@ -99,6 +99,39 @@ def run(args):
           return items.length===2 && items[0].getAttribute("checked")==="true" &&
             items[0].disabled && items[1].getAttribute("label")==="Test Personal";
         """))
+        m.js("""
+          const menu=document.getElementById("profile-switcher-external-links");
+          window.__externalPopup=menu.querySelector("menupopup");
+          window.__externalPopup.openPopup(menu,"end_before");
+        """)
+        wait("window.__externalPopup.state==='open'")
+        m.js("window.__externalPopup.hidePopup();")
+        wait("window.__externalPopup.state==='closed'")
+        check("closing_submenu_keeps_button_expanded", m.js("""
+          return document.getElementById("profile-switcher-menu").state==="open" &&
+            document.getElementById("profile-switcher-button").getAttribute("aria-expanded")==="true";
+        """))
+        m.js("""
+          [...document.querySelectorAll(".profile-switcher-external-destination")]
+            .find(item=>item.getAttribute("data-profile-path")===arguments[0]).doCommand();
+        """, [str(args.other_profile.resolve())])
+        check("external_destination_can_be_configured_in_menu", m.js("""
+          return Services.prefs.getStringPref("uc.profile-switcher.external-profile")===arguments[0]
+            && window.__profileLaunches.length===0;
+        """, [str(args.other_profile.resolve())]))
+        close_menu()
+        m.async_js("await ProfileSwitcher.openMenu();return true;")
+        wait("document.getElementById('profile-switcher-menu').state==='open'")
+        check("external_destination_selection_persists", m.js("""
+          return [...document.querySelectorAll(".profile-switcher-external-destination")]
+            .find(item=>item.getAttribute("data-profile-path")===arguments[0]).getAttribute("checked")==="true";
+        """, [str(args.other_profile.resolve())]))
+        m.js("""
+          document.querySelector('.profile-switcher-external-destination[data-profile-path=""]').doCommand();
+        """)
+        check("normal_external_routing_can_be_restored", m.js("""
+          return Services.prefs.getStringPref("uc.profile-switcher.external-profile")==="";
+        """))
         screenshot = m.command("WebDriver:TakeScreenshot", {"full": False})
         args.report.with_suffix(".png").write_bytes(base64.b64decode(screenshot))
         key("\ue00c")  # Escape
@@ -157,8 +190,9 @@ def run(args):
         check("child_document_unload_keeps_switcher", m.js("return ProfileSwitcher.status==='ready';"))
 
         state = m.js("""
-          return {tabs:[...gBrowser.tabs].map(t=>({id:t.id,bc:t.linkedBrowser.browsingContext.id,
-            inner:t.linkedBrowser.browsingContext.currentWindowGlobal?.innerWindowId})),
+          return {tabs:[...gBrowser.tabs].filter(t=>t.isConnected&&!t.closing)
+            .map(t=>({id:t.id,bc:t.linkedBrowser.browsingContext?.id,
+            inner:t.linkedBrowser.browsingContext?.currentWindowGlobal?.innerWindowId})),
             selected:gBrowser.selectedTab.id};
         """)
         m.async_js("""
@@ -172,8 +206,9 @@ def run(args):
             document.title.split("[Renamed test profile]").length===2;
         """))
         after = m.js("""
-          return {tabs:[...gBrowser.tabs].map(t=>({id:t.id,bc:t.linkedBrowser.browsingContext.id,
-            inner:t.linkedBrowser.browsingContext.currentWindowGlobal?.innerWindowId})),
+          return {tabs:[...gBrowser.tabs].filter(t=>t.isConnected&&!t.closing)
+            .map(t=>({id:t.id,bc:t.linkedBrowser.browsingContext?.id,
+            inner:t.linkedBrowser.browsingContext?.currentWindowGlobal?.innerWindowId})),
             selected:gBrowser.selectedTab.id};
         """)
         check("reload_preserves_tabs_and_documents", state == after)

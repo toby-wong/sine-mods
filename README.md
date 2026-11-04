@@ -9,12 +9,12 @@ through [Sine](https://github.com/CosmoCreeper/Sine).
 | --- | --- | --- |
 | [Little Zen](little-zen/) | 0.1.0 | Opens a compact temporary browsing window. **Open in Space** moves the live page into a normal window, preserving its state and container. |
 | [Auto Glance](auto-glance/) | 0.2.3 | Opens website-created tabs as Glance previews, keeps Mac Command-click as a normal background tab, and adds configurable Space-coloured backdrop opacity. |
-| [Tree Tabs Prototype](tree-tabs-prototype/) | 0.1.1 | Adds collapsible parent/child relationships to ordinary tabs. Moving a parent carries its descendants, including moves between Spaces. |
+| [Tree Tabs Prototype](tree-tabs-prototype/) | 0.1.2 | Adds collapsible parent/child relationships to ordinary tabs. Branches move together, and expanded Glances nest beneath their originating tree tab. |
 | [Alt-click Split View — local fork](alt-click-split-view/) | 1.4.5-local | Preserves live pages when splitting, and stacks new split panes in tall windows. Includes fixes for website routers, frames, Glance, pinned tabs, and Essentials. Based on Kostiantyn Kugot's mod. |
 | [Keyword Tab Search](keyword-tab-search/) | 0.1.2 | Activates an existing search keyword with Tab, including `keyword` for a saved `@keyword` alias, and keeps searches in a pending split pane. |
 | [Find Bar Pane Fix](findbar-pane-fix/) | 0.1.4 | Keeps Cmd/Ctrl+F inside its pane, with configurable styling and optional scaling with page zoom. |
 | [Ctrl Tab Theme](ctrl-tab-theme/) | 0.1.0 | Matches the native Ctrl+Tab switcher to Space colours, with rounded previews, readable titles, and a clear selection outline. |
-| [Profile Switcher](profile-switcher/) | 0.1.0 | Shows the current profile in the sidebar and window title, with a menu to activate or launch another profile. |
+| [Profile Switcher](profile-switcher/) | 0.2.0 | Identifies and switches profiles with native controls. On macOS, optionally sends web links from other apps to a chosen profile. |
 
 All included projects are Sine mods. Other third-party mods from the original
 browser setup are not included.
@@ -38,8 +38,9 @@ browser behavior has **not** been tested.
   Adjust **Extra backdrop opacity** under its Sine Configure button to make the
   area behind a preview less transparent, without changing the sidebar.
 - **Tree Tabs:** only ordinary, unpinned, ungrouped tabs participate. Splits,
-  Essentials, native groups, Glance, private windows, and Little Zen windows are
-  excluded. The experimental split-session tree support was reverted. Use
+  Essentials, native groups, Glance previews, private windows, and Little Zen windows are
+  excluded. Expanding a Glance can nest it under its ordinary source tab.
+  The experimental split-session tree support was reverted. Use
   **right-click a tab → Tree tabs** to nest or outdent deliberately.
 - **Split View:** **Option-click** on Mac / **Alt-click** on Windows is the default.
   It uses each platform's native tab accelerator internally. Windows and Linux
@@ -58,7 +59,9 @@ browser behavior has **not** been tested.
   opacity and title size in **Settings → Sine Mods → Ctrl Tab Theme → Configure**.
 - **Profile Switcher:** click the named button above your tabs to switch profile
   windows. The colour and window-title label are configurable. Install Sine and
-  the mod separately in each profile. Native process activation and launch have
+  the mod separately in each profile. On macOS, use the menu's **Links from other
+  apps** submenu to choose an external-link destination for each profile.
+  Native process activation and launch have
   been tested on macOS; Windows/Linux desktop activation remains untested.
 
 ## Install the Sine mods

@@ -1,14 +1,15 @@
 // ==UserScript==
 // @name           Profile Switcher
-// @version        0.1.0
+// @version        0.2.0
 // @description    Identify the current Zen profile and switch profile windows.
 // @include        chrome://browser/content/browser.xhtml
 // ==/UserScript==
 
 (() => {
   "use strict";
-  const VERSION = "0.1.0";
+  const VERSION = "0.2.0";
   const PREFIX = "uc.profile-switcher.";
+  const ROUTING_MODULE = `chrome://sine/content/profile-switcher/ExternalProfileRouting.sys.mjs?v=${VERSION}`;
   const COLOURS = Object.freeze({
     blue: "#377cde", purple: "#9765cf", green: "#26875f",
     orange: "#c97325", pink: "#c64e89", teal: "#168d96",
@@ -138,6 +139,29 @@
         popup.append(item);
       }
       popup.append(xul("menuseparator"));
+      const routing = xul("menu");
+      routing.id = "profile-switcher-external-links";
+      routing.setAttribute("label", "Links from other apps");
+      if (env.externalRoutingSupported === false) {
+        routing.setAttribute("disabled", "true");
+        routing.setAttribute("tooltiptext", "External-link routing is available on macOS.");
+      }
+      const destinations = xul("menupopup");
+      const target = env.prefs.getStringPref(PREFIX + "external-profile", "");
+      for (const profile of [{ name: "Use normal browser routing", path: "" }, ...profiles]) {
+        const item = xul("menuitem");
+        item.classList.add("profile-switcher-external-destination");
+        item.setAttribute("label", profile.name);
+        item.setAttribute("type", "radio");
+        item.setAttribute("name", "profile-switcher-external-profile");
+        item.setAttribute("checked", String(profile.path === target));
+        item.setAttribute("data-profile-path", profile.path);
+        item.addEventListener("command", () =>
+          env.prefs.setStringPref(PREFIX + "external-profile", profile.path));
+        destinations.append(item);
+      }
+      routing.append(destinations);
+      popup.append(routing);
       const manage = xul("menuitem");
       manage.id = "profile-switcher-manage";
       manage.setAttribute("label", "Manage profiles…");
@@ -173,8 +197,12 @@
         void openMenu();
       }
     };
-    const popupShown = () => button.setAttribute("aria-expanded", "true");
-    const popupHidden = () => button.setAttribute("aria-expanded", "false");
+    const popupShown = event => {
+      if (event.target === popup) button.setAttribute("aria-expanded", "true");
+    };
+    const popupHidden = event => {
+      if (event.target === popup) button.setAttribute("aria-expanded", "false");
+    };
     const activated = () => { void refresh(); };
     const prefObserver = { observe: render };
     const onUnload = event => {
@@ -216,7 +244,6 @@
     label.textContent = "Profile";
     const arrow = html("span");
     arrow.className = "profile-switcher-arrow";
-    arrow.textContent = "⌄";
     arrow.setAttribute("aria-hidden", "true");
     button.append(dot, label, arrow);
     row.append(button);
@@ -238,25 +265,7 @@
   }
 
   async function readNativeProfiles() {
-    const root = Services.dirsvc.get("UAppData", Ci.nsIFile);
-    const data = await IOUtils.readUTF8(PathUtils.join(root.path, "profiles.ini"));
-    const parser = Cc["@mozilla.org/xpcom/ini-parser-factory;1"]
-      .getService(Ci.nsIINIParserFactory).createINIParser(null);
-    parser.initFromString(data);
-    const profiles = [];
-    for (const section of parser.getSections()) {
-      if (!/^Profile\d+$/.test(section)) continue;
-      try {
-        const file = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
-        const path = parser.getString(section, "Path");
-        if (parser.getString(section, "IsRelative") === "1") file.setRelativeDescriptor(root, path);
-        else file.initWithPath(path);
-        profiles.push({ name: parser.getString(section, "Name"), path: file.path });
-      } catch (error) {
-        console.error("[Profile Switcher] Invalid profile entry", section, error);
-      }
-    }
-    return profiles;
+    return ChromeUtils.importESModule(ROUTING_MODULE).readNativeProfiles();
   }
 
   if (typeof module !== "undefined" && module.exports) {
@@ -278,11 +287,11 @@
     await gZenStartup.promiseInitialized;
     if (cancelled || window.closed) return;
     const profile = Services.dirsvc.get("ProfD", Ci.nsIFile);
-    const { SelectableProfileService } =
-      ChromeUtils.importESModule("resource:///modules/profiles/SelectableProfileService.sys.mjs");
+    const routing = ChromeUtils.importESModule(ROUTING_MODULE);
+    const routingStatus = routing.install();
     const { PrivateBrowsingUtils } =
       ChromeUtils.importESModule("resource://gre/modules/PrivateBrowsingUtils.sys.mjs");
-    for (const key of ["colour", "show-in-title"]) {
+    for (const key of ["colour", "show-in-title", "external-profile"]) {
       Services.prefs.setBoolPref("services.sync.prefs.sync." + PREFIX + key, false);
       Services.prefs.setBoolPref("services.sync.prefs.sync-seen." + PREFIX + key, false);
     }
@@ -291,15 +300,9 @@
       currentPath: profile.path,
       fallbackName: profile.leafName,
       isPrivate: PrivateBrowsingUtils.isWindowPrivate(window),
+      externalRoutingSupported: routingStatus.status === "ready",
       readProfiles: readNativeProfiles,
-      launch: async entry => {
-        const file = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
-        file.initWithPath(entry.path);
-        if (!file.exists() || !file.isDirectory()) {
-          throw new Error("That profile folder is unavailable. Check Manage profiles.");
-        }
-        SelectableProfileService.launchInstance({ path: file.path });
-      },
+      launch: entry => routing.launchProfile(entry),
       manage: () => window.openTrustedLinkIn("about:profiles", "tab"),
     });
     window.ProfileSwitcher = controller;
