@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name           Profile Switcher
-// @version        0.2.0
+// @version        0.2.1
 // @description    Identify the current Zen profile and switch profile windows.
 // @include        chrome://browser/content/browser.xhtml
 // ==/UserScript==
 
 (() => {
   "use strict";
-  const VERSION = "0.2.0";
+  const VERSION = "0.2.1";
   const PREFIX = "uc.profile-switcher.";
   const ROUTING_MODULE = `chrome://sine/content/profile-switcher/ExternalProfileRouting.sys.mjs?v=${VERSION}`;
   const COLOURS = Object.freeze({

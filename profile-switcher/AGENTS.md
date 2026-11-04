@@ -2,9 +2,17 @@
 
 ## Current status
 
-- Version **0.2.0** identifies the current profile in the sidebar and window title.
+- Version **0.2.1** identifies the current profile in the sidebar and window title.
 - The control uses Zen's native dropdown SVG, button tokens, and focus outline.
   The popup lists registered profiles, external-link destinations, and `about:profiles`.
+- The button uses the sidebar's `--border-radius-medium` and the address bar's
+  two-pixel inset. The eight-pixel upper gap matches Essentials' six-pixel top
+  padding plus two-pixel tab margin. Essentials supply their own lower gap, so
+  the row adds no bottom padding.
+- Version 0.2.1 styling was checked with native Essentials, a narrow control, and
+  a changed theme radius in a disposable profile. Live Work and Personal checks
+  confirmed matching 14px corners, aligned edges, 8–8.5px vertical gaps, and
+  preserved tabs, splits, tree relationships, and controller instances.
 - Optional macOS routing sends external HTTP/HTTPS links to a configured profile.
   The process handler survives closing the last window without retaining DOM
   windows. Internal navigation and explicit private-window commands stay native.

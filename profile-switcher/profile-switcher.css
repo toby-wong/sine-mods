@@ -2,7 +2,9 @@
   display: flex;
   flex: 0 0 auto;
   min-inline-size: 0;
-  padding: var(--space-xxsmall, 2px) var(--space-xsmall, 4px) var(--space-small, 8px);
+  /* Match the address bar's inset and Essentials' 6px padding + 2px tab margin.
+     Essentials already supply the lower gap. */
+  padding: 8px 2px 0;
 }
 
 #profile-switcher-button {
@@ -18,7 +20,7 @@
   padding-block: var(--button-padding-block, 4px);
   padding-inline: var(--space-medium, 12px) var(--space-small, 8px);
   border: var(--button-border, 1px solid transparent);
-  border-radius: var(--button-border-radius, 8px);
+  border-radius: var(--border-radius-medium, 14px);
   background-color: var(--button-background-color, color-mix(in srgb, currentColor 10%, transparent));
   color: var(--button-text-color, inherit);
   font: inherit;

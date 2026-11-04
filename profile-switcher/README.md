@@ -1,12 +1,13 @@
 # Profile Switcher
 
-Version **0.2.0** adds a profile button above Zen's tabs. It shows the current
+Version **0.2.1** adds a profile button above Zen's tabs. It shows the current
 profile name and a colour marker. Window titles also include the name, making
 profiles identifiable in the operating system's window list.
 
-The button uses Zen's dropdown chevron and native button colours, typography,
-spacing, rounding, and focus outline. The colour marker identifies the profile
-while the rest of the control follows the browser theme.
+The button uses Zen's dropdown chevron, native button colours, typography, and
+focus outline. Its corner radius follows the sidebar controls, and its inset
+and vertical gaps align with the address bar and Essentials. The colour marker
+identifies the profile while the rest of the control follows the browser theme.
 
 Click the button and choose a profile to activate its existing window or launch
 it if closed. Your current profile stays open. **Manage profiles…** opens Zen's
