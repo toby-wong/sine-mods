@@ -1,4 +1,4 @@
-// Alt-click Split View settings · Kostiantyn Kugot · 1.4.5-local
+// Alt-click Split View settings · Kostiantyn Kugot · 1.4.6-local
 (() => {
   window.SplitLinkSettings?.destroy();
   const enabledPref = 'uc.alt-click-split-view.enabled';

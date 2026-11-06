@@ -1,5 +1,18 @@
 # Local split fixes
 
+## 1.4.6-local — 2026-11-06
+
+- New Empty Split can extend the selected split to three or four panes, using
+  its existing keyboard shortcut and Zen's native URL bar. URLs and Keyword
+  Tab Search both open in the new pane. Zen's four-pane limit still applies.
+- Keeps the existing group, layout direction, and live source pages. Escape
+  removes only the temporary pane and restores the original proportions.
+  Pinned and Essential sources are supported.
+- Cancels the temporary pane if a member closes, the group is separated, or
+  the mod is disabled or reloaded. Completed panes remain intact.
+- Leaves unfinished panes out of saved split layouts, so session restoration
+  restores only the pages that were actually opened.
+
 ## 1.4.5-local — 2026-11-03
 
 - New default two-pane splits stack top-to-bottom when the Zen window is taller

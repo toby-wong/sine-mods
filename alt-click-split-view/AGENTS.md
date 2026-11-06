@@ -2,7 +2,7 @@
 
 ## Current status
 
-- Source baseline: **1.4.5-local**, a fork of Kostiantyn Kugot's **1.4.2** mod.
+- Source baseline: **1.4.6-local**, a fork of Kostiantyn Kugot's **1.4.2** mod.
   Preserve the upstream author and [MIT license](LICENSE).
 - A capturing content actor handles routed links and frames before page handlers.
   Option/Alt-click opens a native split while preserving the original document.
@@ -15,16 +15,23 @@
   a horizontal divider when `outerHeight > outerWidth`; other window shapes
   retain the native default. Covers modifier-click, New Empty Split, and
   Glance's Split button. The Sine and Tab Management controls update live.
+- New Empty Split extends an existing two- or three-pane group through its
+  assigned native shortcut. It adds a temporary leaf to the existing layout,
+  then uses native tab submission and `splitTabs` to commit the new page.
+  URLs and Keyword Tab Search work; the native four-pane limit remains.
+  Cancellation, losing focus, closing a member, separating the group, disabling
+  the mod, or hot reload removes only the unfinished pane.
 - Parent-hook tests cover Windows, macOS, and Linux tab accelerators and Glance
   conflicts. Live browser evidence is from macOS on Zen 1.24b; Windows desktop
   input has not been validated. See
   [PATCH-NOTES.md](PATCH-NOTES.md) and [VERIFICATION.md](VERIFICATION.md).
-- Current validation: 14 Node tests, 63 adaptive-layout checks, 15 split
-  regressions, 36 Keyword Tab Search checks, and 31 Auto Glance checks passed.
-  A separate restart restored the saved horizontal layout in a wide window;
-  unsplitting restored an Essential and preserved its current document/draft.
-  Unload restored the native methods. All browser checks used a disposable
-  macOS profile on Zen 1.24b.
+- Current validation: 14 Node tests, 195 existing-split checks, 63 adaptive
+  checks, 15 split regressions, 36 Keyword Tab Search checks, and 31 Auto Glance
+  checks passed. Eleven cold-restart checks restored three panes, their saved
+  drafts and layout, excluded an unfinished fourth pane, and added a fourth
+  afterward without reloading the restored documents. The shared installer's
+  nine tests also passed. All browser checks used a disposable macOS profile
+  on Zen 1.24b; normal and private windows are covered.
 
 ## Implementation constraints
 
@@ -45,12 +52,25 @@
 - Adapt only new default pairs. Preserve explicit `gridType`/side choices,
   existing split groups, and session restoration. Never reflow on resize or
   load pages to change direction.
+- Native Zen 1.24b disables `cmd_zenNewEmptySplit` for any split; simply enabling
+  that command creates an overlapping two-tab group. Keep the existing-group
+  command wrapper and temporary leaf lifecycle together. Never replace the
+  original live tabs to extend a group.
+- Use the native URL-bar close token. Its close event is only emitted while
+  focused, so the owned close callback also handles closure after a blur.
+  Preserve native search-mode Escape behavior and later callback owners.
+- Exclude the temporary empty leaf from serialized session data without mutating
+  the live layout. Private windows can have an empty string for the empty tab's
+  ID. Borrowed Essentials can lack a workspace attribute; capture the group's
+  effective workspace when starting the pending pane.
+- On cancellation/unload, cancel owned timers and animation frames and restore
+  only owned method descriptors. An unloaded wrapper must remain inert if
+  retained by another mod. Completed splits survive hot reload.
 - Glance passes `vsep` explicitly for its default Split action. The adaptive
   wrapper tracks the exact parent/preview pair during that asynchronous
   promotion; never use a global flag that could affect an unrelated split.
-- Remove the adaptive wrappers before the page-preservation wrapper during
-  unload. Restore only methods still owned by this instance, and leave any
-  retained wrapper inert after cleanup.
+- Remove adaptive wrappers, then existing-group command wrappers, then the
+  page-preservation wrapper during unload.
 - Do not silently install or broaden the Hammerspoon guard: it also affects
   background clicks in other applications. Keep it separate from browser files.
 - If runtime resources change, update the collection's shared installer. Keep
@@ -86,6 +106,13 @@ needs this collection's Keyword Tab Search and Auto Glance mods enabled.
 Use a fresh disposable profile after a deliberately failing empty-split test:
 an interrupted pending native split can leave its shared placeholder attached.
 The old 1.4.4-local build fails the tall-window placeholder check.
+
+Run `tests/extend.py --profile ... --port ... --report ...` for adding third and
+fourth panes with real keyboard input, URLs, keyword searches, unequal pane
+sizes, mixed layouts, pins/Essentials, private windows, cancellation, blur,
+member closure, session serialization, and reload/unload. The 1.4.5-local
+baseline leaves the assigned New Empty Split command disabled in a two-pane
+group. Escape may first leave a retained search mode before cancelling.
 
 ## Potential future direction
 

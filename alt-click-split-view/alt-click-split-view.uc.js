@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Alt-click Split View
 // @author         Kostiantyn Kugot
-// @version        1.4.5-local
+// @version        1.4.6-local
 // @description    Open Alt-clicked links in Zen Split View.
 // @include        chrome://browser/content/browser.xhtml
 // ==/UserScript==
@@ -99,7 +99,8 @@
       return original.apply(this, args);
     });
     wrap(splitter, 'createEmptySplit', original => function adaptiveEmptySplit(...args) {
-      if (args[0] === undefined && tallWindow() && !this._sessionRestoring) args[0] = 'bottom';
+      if (args[0] === undefined && tallWindow() && !this._sessionRestoring &&
+          !win.gBrowser?.selectedTab?.splitView) args[0] = 'bottom';
       return original.apply(this, args);
     });
     wrap(glance, 'splitGlance', original => async function adaptiveGlanceSplit(...args) {
@@ -122,14 +123,217 @@
     };
   }
 
+  function installExistingSplitCommand(win, prefs) {
+    const splitter = win.gZenViewSplitter;
+    const command = win.document.getElementById('cmd_zenNewEmptySplit');
+    const cleanup = [];
+    let destroyed = false, pending = null, refreshFrame = 0, clearWaitingFrame = 0;
+    const enabled = () => !destroyed && prefs.getBoolPref(ENABLED_PREF, true);
+    const selectedGroup = () => splitter._data.find(group =>
+      group.tabs.includes(win.gBrowser.selectedTab));
+    const canExtend = group => enabled() && group && !pending &&
+      !splitter.waitingForSplitTab && !splitter._sessionRestoring &&
+      group.tabs.length >= 2 && group.tabs.length < splitter.MAX_TABS &&
+      !splitter._data.some(item => item.tabs.includes(win.gZenWorkspaces._emptyTab));
+    const refresh = () => {
+      refreshFrame = 0;
+      if (destroyed) return;
+      const tab = win.gBrowser.selectedTab;
+      // Other native command states (including Glance) retain their own rules.
+      if (tab?.hasAttribute('zen-empty-tab')) command.setAttribute('disabled', 'true');
+      else if (tab?.splitView) command.toggleAttribute('disabled', !canExtend(selectedGroup()));
+    };
+    const queueRefresh = () => {
+      win.queueMicrotask(() => {
+        if (!destroyed && !refreshFrame) refreshFrame = win.requestAnimationFrame(refresh);
+      });
+    };
+    const finish = (session, { onElementPicked = false, onSwitch = false } = {}) => {
+      if (pending !== session) return;
+      pending = null;
+      session.controller.abort();
+      if (session.timer) win.clearTimeout(session.timer);
+      if (session.closeTimer) win.clearTimeout(session.closeTimer);
+      if (win.gURLBar._zenHandleUrlbarClose === session.closeCallback) {
+        win.gURLBar._zenHandleUrlbarClose = session.originalClose;
+      }
+      const picked = win.gBrowser.selectedTab;
+      const { group, source, empty, members } = session;
+      const index = splitter._data.indexOf(group);
+      if (index >= 0 && group.tabs.includes(empty)) {
+        splitter.removeTabFromGroup(empty, index, {
+          forUnsplit: true, changeTab: !onSwitch,
+        });
+      }
+      // Match native timing: the new tab's opening/URL-bar animations still
+      // need to know this was a split submission until the next frame.
+      clearWaitingFrame = win.requestAnimationFrame(() => {
+        clearWaitingFrame = 0;
+        splitter.waitingForSplitTab = false;
+        refresh();
+      });
+      const sourceStillPresent = source.isConnected && !source.closing &&
+        splitter._data.includes(group) && group.tabs.includes(source);
+      const canUsePicked = onElementPicked && enabled() && sourceStillPresent &&
+        picked && picked !== empty && picked.isConnected && !picked.closing && !picked.splitView &&
+        !members.includes(picked) && group.tabs.length < splitter.MAX_TABS &&
+        session.workspace === picked.getAttribute('zen-workspace-id');
+      if (canUsePicked) {
+        splitter.splitTabs([source, picked], undefined, 1);
+        if (group.tabs.includes(picked)) win.gBrowser.selectedTab = picked;
+      } else if (!onSwitch && !onElementPicked && (picked === empty || picked === source) &&
+                 source.isConnected && !source.closing) {
+        win.gBrowser.selectedTab = source;
+      }
+      queueRefresh();
+    };
+    const wrap = (key, makeWrapper) => {
+      const original = splitter[key];
+      const descriptor = Object.getOwnPropertyDescriptor(splitter, key);
+      const wrapped = makeWrapper(original);
+      splitter[key] = wrapped;
+      cleanup.push(() => {
+        if (splitter[key] !== wrapped) return;
+        if (descriptor) Object.defineProperty(splitter, key, descriptor);
+        else delete splitter[key];
+      });
+    };
+    wrap('onLocationChange', original => function splitCommandLocationChange(...args) {
+      const result = original.apply(this, args);
+      refresh();
+      return result;
+    });
+    wrap('storeDataForSessionStore', original => function saveCompletedSplitPanes(...args) {
+      const data = original.apply(this, args);
+      if (!pending || destroyed) return data;
+      const emptyId = pending.empty.id;
+      const removePlaceholder = node => {
+        if (node.type === 'leaf') return node.tabId === emptyId ? null : node;
+        const children = node.children.map(removePlaceholder).filter(Boolean);
+        if (children.length === node.children.length &&
+            children.every((child, index) => child === node.children[index])) return node;
+        if (!children.length) return null;
+        if (children.length === 1) return { ...children[0], sizeInParent: node.sizeInParent };
+        const total = children.reduce((sum, child) => sum + child.sizeInParent, 0);
+        return { ...node, children: children.map(child =>
+          ({ ...child, sizeInParent: child.sizeInParent * 100 / total })) };
+      };
+      // The shared empty tab has no persistent sidebar membership. Serialize
+      // only the completed panes, without changing their live preview layout.
+      return data.map(group => group.groupId === pending.group.groupId ? {
+        ...group,
+        tabs: group.tabs.filter(id => id !== emptyId),
+        layoutTree: removePlaceholder(group.layoutTree),
+      } : group);
+    });
+    wrap('createEmptySplit', original => function extendEmptySplit(...args) {
+      if (enabled() && (pending || clearWaitingFrame)) return undefined;
+      const source = win.gBrowser.selectedTab;
+      if (!enabled() || !source?.splitView || source.hasAttribute('zen-empty-tab')) {
+        return original.apply(this, args);
+      }
+      const group = selectedGroup();
+      if (!canExtend(group)) return undefined;
+      const empty = win.gZenWorkspaces._emptyTab;
+      const session = {
+        group, source, empty, members: [...group.tabs],
+        // A borrowed Essential may have no workspace attribute. The other
+        // members/current Space identify where this pending pane belongs.
+        workspace: source.getAttribute('zen-workspace-id') ||
+          group.tabs.map(tab => tab.getAttribute('zen-workspace-id')).find(Boolean) ||
+          win.gZenWorkspaces.activeWorkspace,
+        controller: new win.AbortController(), closeToken: {}, timer: 0, closeTimer: 0,
+      };
+      pending = session;
+      this.waitingForSplitTab = true;
+      try {
+        // Add only a temporary leaf. Keep the native group, layout tree and
+        // existing live browsers; native removal restores their proportions.
+        group.tabs.push(empty);
+        this.addTabToSplit(empty, group.layoutTree, false);
+        this.activateSplitView(group);
+        win.gBrowser.selectedTab = empty;
+        win.addEventListener('ZenURLBarClosed', event => {
+          if (win.gZenUIManager.matchesCloseToken(session.closeToken, event)) {
+            finish(session, event.detail);
+          }
+        }, { signal: session.controller.signal });
+        session.timer = win.setTimeout(() => {
+          session.timer = 0;
+          if (pending !== session) return;
+          try {
+            if (!win.gZenUIManager.handleNewTab(false, false, 'tab', true, session.closeToken)) {
+              finish(session);
+            } else if (pending === session && typeof win.gURLBar._zenHandleUrlbarClose === 'function') {
+              session.originalClose = win.gURLBar._zenHandleUrlbarClose;
+              session.closeCallback = function closeExtendedSplit(onSwitch = false, onElementPicked = false) {
+                const wasFocused = win.gURLBar.focused;
+                const result = session.originalClose.apply(this, arguments);
+                // Native Zen emits ZenURLBarClosed only if the URL bar still
+                // has focus. A blur before closing must also release this pane.
+                if (!wasFocused && pending === session && !session.closeTimer) {
+                  session.closeTimer = win.setTimeout(() => {
+                    session.closeTimer = 0;
+                    finish(session, { onSwitch, onElementPicked });
+                  }, 0);
+                }
+                return result;
+              };
+              win.gURLBar._zenHandleUrlbarClose = session.closeCallback;
+            }
+          } catch (error) {
+            finish(session);
+            win.console.error('[Alt-click Split View]', error);
+          }
+        }, 0);
+        refresh();
+      } catch (error) {
+        finish(session);
+        throw error;
+      }
+      return undefined;
+    });
+    const changed = () => {
+      if (destroyed) return;
+      if (pending && (!enabled() ||
+          pending.members.some(tab => !tab.isConnected || tab.closing ||
+            !pending.group.tabs.includes(tab)) ||
+          !splitter._data.includes(pending.group) || !pending.group.tabs.includes(pending.empty))) {
+        finish(pending);
+      }
+      queueRefresh();
+    };
+    const groupChanged = () => win.queueMicrotask(changed);
+    const events = ['TabClose', 'ZenTabRemovedFromSplit', 'ZenSplitViewTabsSplit'];
+    for (const name of events) win.addEventListener(name, groupChanged);
+    prefs.addObserver(ENABLED_PREF, changed);
+    refresh();
+    return () => {
+      if (destroyed) return;
+      if (pending) finish(pending);
+      if (clearWaitingFrame) {
+        win.cancelAnimationFrame(clearWaitingFrame);
+        clearWaitingFrame = 0;
+        splitter.waitingForSplitTab = false;
+      }
+      destroyed = true;
+      if (refreshFrame) win.cancelAnimationFrame(refreshFrame);
+      for (const name of events) win.removeEventListener(name, groupChanged);
+      prefs.removeObserver(ENABLED_PREF, changed);
+      for (const restore of cleanup.reverse()) restore();
+      // Let native/remaining wrappers recompute the command after removal.
+      splitter.onLocationChange(win.gBrowser.selectedBrowser);
+    };
+  }
+
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { shouldSplitLinkClick, installHoverFocus, installAdaptiveSplits };
+    module.exports = { shouldSplitLinkClick, installHoverFocus, installAdaptiveSplits, installExistingSplitCommand };
     return;
   }
 
   window.AltClickSplitView?.destroy({ reloading: true });
   const hookKey = '__altClickSplitViewHook';
-  let cleanup, cleanupHover, cleanupSplits, cleanupAdaptive, cleanupStartup;
+  let cleanup, cleanupHover, cleanupSplits, cleanupAdaptive, cleanupExisting, cleanupStartup;
   let destroyed = false;
   const report = error => console.error('[Alt-click Split View]', error);
   const enabled = () => Services.prefs.getBoolPref(ENABLED_PREF, true);
@@ -363,6 +567,8 @@
     cleanupStartup = null;
     cleanupAdaptive?.();
     cleanupAdaptive = null;
+    cleanupExisting?.();
+    cleanupExisting = null;
     cleanupSplits?.(options);
     cleanupSplits = null;
     cleanupHover?.();
@@ -374,7 +580,7 @@
   }
 
   const unload = () => destroy({ reloading: true });
-  const api = { version: '1.4.5-local', status: 'starting', destroy };
+  const api = { version: '1.4.6-local', status: 'starting', destroy };
   window.AltClickSplitView = api;
   for (const pref of [ENABLED_PREF, TRIGGER_PREF, HOVER_PREF, ADAPTIVE_PREF]) {
     Services.prefs.setBoolPref(`services.sync.prefs.sync.${pref}`, false);
@@ -403,6 +609,7 @@
     await gZenStartup.promiseInitialized;
     if (destroyed) return;
     cleanupSplits = preserveLivePages();
+    cleanupExisting = installExistingSplitCommand(window, Services.prefs);
     cleanupAdaptive = installAdaptiveSplits(window, Services.prefs);
     api.status = 'ready';
   })().catch(error => {

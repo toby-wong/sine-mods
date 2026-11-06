@@ -3,7 +3,7 @@
 Option-click a web link on macOS, or Alt-click on Windows, to open it beside the
 source page in Zen's native Split View.
 
-This is version **1.4.5-local**, based on **1.4.2** of
+This is version **1.4.6-local**, based on **1.4.2** of
 [Kostiantyn Kugot's Alt-click Split View](https://github.com/kkugot/alt-click-split-view).
 The upstream author and [MIT license](LICENSE) are retained.
 
@@ -20,6 +20,10 @@ The upstream author and [MIT license](LICENSE) are retained.
 - Restores temporary pin/Essential state after separating a managed split.
 - Keeps existing splits during hot reload. Disabling the mod separates its
   managed splits without closing or reloading their pages.
+- Lets New Empty Split add a third or fourth pane to the selected split.
+  Use the shortcut assigned in Zen's Keyboard Shortcuts settings, then enter
+  a URL or use Keyword Tab Search. Escape cancels the new pane and restores
+  the original split. Existing pages, their drafts, and the layout are retained.
 - Uses a horizontal divider for new two-pane splits when the browser window is
   taller than it is wide. Wide and square windows keep side-by-side panes.
   This applies to Option/Alt-click, New Empty Split (including keyword searches),

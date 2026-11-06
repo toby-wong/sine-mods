@@ -328,6 +328,9 @@ def run(args):
         assert mini, "Little Zen window not created"
         m.command("WebDriver:SwitchToWindow", {"handle": mini})
         wait("window.KeywordTabSearch?.status==='ready'")
+        # The initial page load must not replace the URL selection while typing.
+        wait("!gBrowser.selectedBrowser.webProgress.isLoadingDocument && " +
+             "gBrowser.selectedBrowser.currentURI.spec===" + json.dumps(base + "/little"))
         check("little_zen_keyword_tab", activate("kwnew"))
         m.js("""
           const main=[...Services.wm.getEnumerator("navigator:browser")]

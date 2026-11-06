@@ -306,6 +306,9 @@ test('explicit layouts, directions, restored sessions, and existing groups retai
   f.splitter.createEmptySplit();
   assert.deepEqual(f.calls.pop().args, []);
   f.splitter._sessionRestoring = false;
+  f.win.gBrowser = { selectedTab: { splitView: true } };
+  f.splitter.createEmptySplit();
+  assert.deepEqual(f.calls.pop().args, [], 'extending an existing split must not inherit the window aspect ratio');
   for (const property of ['splitView', 'hidden']) {
     f.tabs[0][property] = true;
     f.splitter.splitTabs(f.tabs);

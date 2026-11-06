@@ -1,5 +1,33 @@
 # Alt-click Split View verification
 
+## 1.4.6-local — extending existing splits
+
+Validation used Zen 1.24b on macOS in a disposable profile:
+
+- 195 existing-split checks passed using the assigned Ctrl+Cmd+Shift+T shortcut.
+  A two-pane group accepts a third and fourth pane, with either a URL or a
+  native keyword search. Tests cover unequal sizes, row/column/mixed layouts,
+  pinned tabs, Essentials, private windows, and the four-pane limit.
+- Existing document and browsing-context identity, drafts, and one-request
+  counts were preserved. Escape, blur, switching panes, closing a member,
+  separating the group, disabling, and reloading all cleaned up pending panes.
+  Temporary leaves were excluded from serialized layouts.
+- Eleven cold-restart checks passed. The browser saved a three-pane split
+  while a fourth pane was unfinished, then restored the completed panes,
+  layout, and typed form drafts. Adding a fourth pane after restart preserved
+  the restored documents.
+- All 14 Node tests, 63 adaptive-layout checks, 15 split regressions,
+  36 Keyword Tab Search checks, 31 Auto Glance checks, and nine shared
+  installer tests passed. The keyword fixture now waits for Little Zen's
+  initial page load before selecting and typing in the address bar.
+- A targeted live-reload rehearsal preserved tab/document identity, split
+  layouts, selection, window geometry, preferences, and other mod instances.
+  The temporary activation helper removed itself afterward.
+
+The 1.4.5-local baseline failed the actual keyboard test: New Empty Split
+remained disabled in an existing two-pane group. Reports, fixtures, and browser
+profiles are kept outside Git. Native Windows/Linux input remains untested.
+
 ## 1.4.5-local — adaptive direction
 
 Validation used Zen 1.24b on macOS in a disposable profile:
