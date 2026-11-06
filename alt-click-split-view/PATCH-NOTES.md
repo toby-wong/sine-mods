@@ -1,5 +1,17 @@
 # Local split fixes
 
+## 1.4.7-local — 2026-11-06
+
+- Middle-clicking the combined split row closes the whole split through Zen's
+  native group-close action. Unsaved-page prompts run before any pane closes.
+  Explicit pane close buttons, Close Tab menu actions, and Cmd/Ctrl+W remain
+  individual closes.
+- Closing an unfocused pane or group preserves the selected tab. Closing the
+  focused pane chooses a remaining pane in the same split before falling back
+  to Zen's normal tab selection. Bulk closes exclude every pane being removed.
+- Closing hooks are removed on unload and stay inert if retained by another
+  wrapper. Content link clicks and unsplitting keep their existing behavior.
+
 ## 1.4.6-local — 2026-11-06
 
 - New Empty Split can extend the selected split to three or four panes, using

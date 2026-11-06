@@ -1,5 +1,38 @@
 # Alt-click Split View verification
 
+## 1.4.7-local — split closure and focus
+
+Validation used Zen 1.24b on macOS in a disposable profile:
+
+- 114 close checks passed. Actual middle-clicks close two-, three-, and
+  four-pane groups while preserving the focused tab, input draft, and other
+  split layouts. TabSelect traces verify there is no temporary selection
+  detour when closing an unfocused pane or a group without an unload prompt.
+- Actual close buttons, Close Tab context-menu items, and Cmd+W close only
+  the intended pane. Closing the focused pane stays with a surviving split
+  member even when its opener is outside the split. Pinned/Essential source
+  documents survive closing the other pane.
+- Native unsaved-page prompts were exercised with both Cancel and Leave.
+  Cancelling preserves every pane; accepting closes all panes. The native
+  prompt may select its owning pane. Internal/programmatic closes retain
+  native selection and are never expanded into group closes.
+- Reloading preserves documents and selection, and one middle-click closes
+  the group once. Unloading restores native single-tab middle-click behavior.
+- All 195 existing-split checks, 63 adaptive-layout checks, and 15 split
+  regressions passed, including New Empty Split and keyword searches. The
+  36 Keyword Tab Search checks, 31 Auto Glance checks, 14 Node tests, and nine
+  shared installer tests also passed.
+- A targeted reload rehearsal preserved all 16 test tabs, four split layouts,
+  selection, document identity, window geometry, preferences, and other mod
+  instances. The temporary activation helper removed itself.
+
+The 1.4.6-local baseline closed only the pane under the middle-clicked pointer
+and could select an outside opener when the focused pane closed. An early
+implementation also applied focus selection to internal cleanup; it was
+narrowed to native user close actions before the final regression runs.
+Evidence and disposable profiles remain outside Git. Windows/Linux desktop
+input remains untested.
+
 ## 1.4.6-local — extending existing splits
 
 Validation used Zen 1.24b on macOS in a disposable profile:

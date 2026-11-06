@@ -3,7 +3,7 @@
 Option-click a web link on macOS, or Alt-click on Windows, to open it beside the
 source page in Zen's native Split View.
 
-This is version **1.4.6-local**, based on **1.4.2** of
+This is version **1.4.7-local**, based on **1.4.2** of
 [Kostiantyn Kugot's Alt-click Split View](https://github.com/kkugot/alt-click-split-view).
 The upstream author and [MIT license](LICENSE) are retained.
 
@@ -18,6 +18,11 @@ The upstream author and [MIT license](LICENSE) are retained.
 - Promotes an existing Glance preview before splitting beside it.
 - Reuses pinned and Essential source pages instead of loading duplicate pages.
 - Restores temporary pin/Essential state after separating a managed split.
+- Middle-clicking a split's combined sidebar row closes all its panes.
+  A pane's **×**, **Close Tab** context-menu action, or **Cmd/Ctrl+W** still
+  closes only that pane. Closing another pane or group keeps the focused tab;
+  closing the focused pane selects a surviving pane in the same split.
+  Native unsaved-page prompts are retained.
 - Keeps existing splits during hot reload. Disabling the mod separates its
   managed splits without closing or reloading their pages.
 - Lets New Empty Split add a third or fourth pane to the selected split.
@@ -31,7 +36,7 @@ The upstream author and [MIT license](LICENSE) are retained.
 
 See [PATCH-NOTES.md](PATCH-NOTES.md) for details and
 [VERIFICATION.md](VERIFICATION.md) for validation records.
-With the default Alt trigger, normal clicks, Ctrl/Command-click, middle-click,
+With the default Alt trigger, normal web clicks, Ctrl/Command-click, middle-click,
 and Shift-click retain their own handlers; Auto Glance may separately customize
 some of those actions.
 
@@ -106,3 +111,5 @@ profile. They check document identity, page state, frames, pinned/Essential
 restoration, Glance promotion, and repeated split operations.
 `tests/adaptive.py` also checks actual pane geometry, the new-split keyboard
 shortcut with keyword search, settings changes, and layout preservation.
+`tests/close.py` checks actual sidebar and keyboard closes, focus transitions,
+individual and whole-group closure, unsaved-page prompts, and reload/unload.

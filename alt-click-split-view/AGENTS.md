@@ -2,7 +2,7 @@
 
 ## Current status
 
-- Source baseline: **1.4.6-local**, a fork of Kostiantyn Kugot's **1.4.2** mod.
+- Source baseline: **1.4.7-local**, a fork of Kostiantyn Kugot's **1.4.2** mod.
   Preserve the upstream author and [MIT license](LICENSE).
 - A capturing content actor handles routed links and frames before page handlers.
   Option/Alt-click opens a native split while preserving the original document.
@@ -21,17 +21,22 @@
   URLs and Keyword Tab Search work; the native four-pane limit remains.
   Cancellation, losing focus, closing a member, separating the group, disabling
   the mod, or hot reload removes only the unfinished pane.
+- Middle-clicking the combined split row closes the whole group. Explicit pane
+  close controls and Cmd/Ctrl+W close one pane. Closing a different pane/group
+  preserves selection; closing the selected pane prefers a surviving split
+  member. Native before-unload prompts are retained.
 - Parent-hook tests cover Windows, macOS, and Linux tab accelerators and Glance
   conflicts. Live browser evidence is from macOS on Zen 1.24b; Windows desktop
   input has not been validated. See
   [PATCH-NOTES.md](PATCH-NOTES.md) and [VERIFICATION.md](VERIFICATION.md).
-- Current validation: 14 Node tests, 195 existing-split checks, 63 adaptive
-  checks, 15 split regressions, 36 Keyword Tab Search checks, and 31 Auto Glance
-  checks passed. Eleven cold-restart checks restored three panes, their saved
-  drafts and layout, excluded an unfinished fourth pane, and added a fourth
-  afterward without reloading the restored documents. The shared installer's
-  nine tests also passed. All browser checks used a disposable macOS profile
-  on Zen 1.24b; normal and private windows are covered.
+- Current validation: 114 split-close checks, 14 Node tests, 195 existing-split
+  checks, 63 adaptive checks, 15 split regressions, 36 Keyword Tab Search checks,
+  and 31 Auto Glance checks passed. The shared installer's nine tests also
+  passed. All browser checks used a disposable macOS profile on Zen 1.24b;
+  normal and private windows are covered by the split suites.
+- Prior 1.4.6-local validation included eleven cold-restart checks restoring
+  three panes, their saved drafts and layout, excluding an unfinished fourth
+  pane, and adding a fourth afterward without reloading the restored documents.
 
 ## Implementation constraints
 
@@ -66,11 +71,20 @@
 - On cancellation/unload, cancel owned timers and animation frames and restore
   only owned method descriptors. An unloaded wrapper must remain inert if
   retained by another mod. Completed splits survive hot reload.
+- Closing focus hooks use native user-triggered telemetry or a trusted close
+  event. Keep internal/programmatic cleanup and session closes native: changing
+  selection during cleanup can interfere with the next URL-bar split command.
+  Track the whole native bulk-close set so focus never moves to another pane
+  in that set. Middle-click group closure uses `removeTabGroup` with its native
+  before-unload preflight; cancellation must keep every pane open.
+- Only the combined split sidebar row gets whole-group middle-click closure.
+  Explicit close/reset/media controls, content clicks, ordinary tabs, and
+  ordinary tab groups retain their native handlers.
 - Glance passes `vsep` explicitly for its default Split action. The adaptive
   wrapper tracks the exact parent/preview pair during that asynchronous
   promotion; never use a global flag that could affect an unrelated split.
-- Remove adaptive wrappers, then existing-group command wrappers, then the
-  page-preservation wrapper during unload.
+- Remove closing wrappers, then adaptive wrappers, existing-group command
+  wrappers, and the page-preservation wrapper during unload.
 - Do not silently install or broaden the Hammerspoon guard: it also affects
   background clicks in other applications. Keep it separate from browser files.
 - If runtime resources change, update the collection's shared installer. Keep
@@ -114,12 +128,19 @@ member closure, session serialization, and reload/unload. The 1.4.5-local
 baseline leaves the assigned New Empty Split command disabled in a two-pane
 group. Escape may first leave a retained search mode before cancelling.
 
+Run `tests/close.py --profile ... --port ... --report ...` for actual combined-row
+middle-clicks, close buttons, context-menu closes, Cmd/Ctrl+W, pinned/Essential
+sources, two to four panes, other active splits, native prompt cancellation and
+acceptance, programmatic cleanup, and reload/unload. Assert TabSelect transitions
+as well as final selection, and preserve live documents, drafts, and request
+counts. Native unsaved-page dialogs can select their owning pane for attention.
+
 ## Potential future direction
 
 - Keep the local fixes as a small, reviewable patch against upstream; compare new
   upstream versions before adopting them rather than replacing the fork blindly.
 - Validate Windows modifiers and expand compatibility checks for changed native
-  splitting/adoption APIs.
+  splitting/adoption APIs and native user-close telemetry.
 - Improve multi-window, focus, and repeated reload coverage, including pin-state
   restoration when other mods also wrap the native handlers.
 

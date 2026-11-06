@@ -10,7 +10,7 @@ through [Sine](https://github.com/CosmoCreeper/Sine).
 | [Little Zen](little-zen/) | 0.1.0 | Opens a compact temporary browsing window. **Open in Space** moves the live page into a normal window, preserving its state and container. |
 | [Auto Glance](auto-glance/) | 0.2.3 | Opens website-created tabs as Glance previews, keeps Mac Command-click as a normal background tab, and adds configurable Space-coloured backdrop opacity. |
 | [Tree Tabs Prototype](tree-tabs-prototype/) | 0.1.2 | Adds collapsible parent/child relationships to ordinary tabs. Branches move together, and expanded Glances nest beneath their originating tree tab. |
-| [Alt-click Split View — local fork](alt-click-split-view/) | 1.4.6-local | Preserves live pages when splitting, lets New Empty Split add a third or fourth pane, and stacks new split pairs in tall windows. Includes fixes for website routers, frames, Glance, pinned tabs, and Essentials. Based on Kostiantyn Kugot's mod. |
+| [Alt-click Split View — local fork](alt-click-split-view/) | 1.4.7-local | Preserves live pages when splitting, adds third/fourth panes, and supports whole-group middle-click closure with stable pane focus. Stacks new split pairs in tall windows. Based on Kostiantyn Kugot's mod. |
 | [Keyword Tab Search](keyword-tab-search/) | 0.1.2 | Activates an existing search keyword with Tab, including `keyword` for a saved `@keyword` alias, and keeps searches in a pending split pane. |
 | [Find Bar Pane Fix](findbar-pane-fix/) | 0.1.4 | Keeps Cmd/Ctrl+F inside its pane, with configurable styling and optional scaling with page zoom. |
 | [Ctrl Tab Theme](ctrl-tab-theme/) | 0.1.0 | Matches the native Ctrl+Tab switcher to Space colours, with rounded previews, readable titles, and a clear selection outline. |

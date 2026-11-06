@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Alt-click Split View
 // @author         Kostiantyn Kugot
-// @version        1.4.6-local
+// @version        1.4.7-local
 // @description    Open Alt-clicked links in Zen Split View.
 // @include        chrome://browser/content/browser.xhtml
 // ==/UserScript==
@@ -60,6 +60,97 @@
     return () => {
       cancel();
       for (const [name, handler] of events) win.removeEventListener(name, handler, true);
+    };
+  }
+
+  function installSplitClosing(win, prefs) {
+    const browser = win.gBrowser, splitter = win.gZenViewSplitter;
+    const cleanup = [], closingPanes = [], closingSets = [];
+    const pendingGroups = new WeakSet();
+    let destroyed = false;
+    const enabled = () => !destroyed && prefs.getBoolPref(ENABLED_PREF, true);
+    const groupFor = tab => splitter._data.find(group => group.tabs.includes(tab));
+    const wrap = (key, makeWrapper) => {
+      if (typeof browser[key] !== 'function') return;
+      const original = browser[key];
+      const descriptor = Object.getOwnPropertyDescriptor(browser, key);
+      const wrapped = makeWrapper(original);
+      browser[key] = wrapped;
+      cleanup.push(() => {
+        if (browser[key] !== wrapped) return;
+        if (descriptor) Object.defineProperty(browser, key, descriptor);
+        else delete browser[key];
+      });
+    };
+
+    wrap('removeTab', original => function closeSplitPane(tab, ...args) {
+      const options = args[0];
+      const userClose = options?.triggeringEvent?.isTrusted || options?.metricsContext?.isUserTriggered;
+      if (!enabled() || this !== browser || !userClose || !groupFor(tab)) {
+        return original.call(this, tab, ...args);
+      }
+      closingPanes.push(tab);
+      try {
+        return original.call(this, tab, ...args);
+      } finally {
+        closingPanes.pop();
+      }
+    });
+    wrap('removeTabs', original => function closeSplitPanes(tabs, ...args) {
+      if (!enabled() || this !== browser) return original.call(this, tabs, ...args);
+      // Native bulk removal closes the selected tab last. Do not select another
+      // pane that is about to close as part of that same operation.
+      closingSets.push(new Set(tabs));
+      try {
+        return original.call(this, tabs, ...args);
+      } finally {
+        closingSets.pop();
+      }
+    });
+    wrap('_findTabToBlurTo', original => function chooseSurvivingPane(tab, excluded = []) {
+      const next = original.apply(this, arguments);
+      if (!enabled() || this !== browser || tab !== browser.selectedTab ||
+          !closingPanes.includes(tab)) return next;
+      const group = groupFor(tab);
+      if (!group) return next;
+      const candidates = group.tabs.filter(other => other !== tab && other.isConnected &&
+        !other.closing && !other.hidden && !other.hasAttribute('zen-empty-tab') &&
+        !excluded.includes(other) && !closingSets.some(tabs => tabs.has(other)));
+      if (!candidates.length || candidates.includes(next)) return next;
+      const index = group.tabs.indexOf(tab);
+      return group.tabs.slice(index + 1).find(other => candidates.includes(other)) || candidates.at(-1);
+    });
+
+    const middleClick = event => {
+      if (!enabled() || !event.isTrusted || event.defaultPrevented || event.button !== 1) return;
+      const target = event.target;
+      // Explicit pane controls keep their native, single-pane action. The rest
+      // of the combined sidebar row represents the whole split.
+      if (target?.closest?.('.tab-close-button, .tab-reset-button, .tab-reset-pin-button, ' +
+          '.tab-audio-button, .tab-icon-overlay, tab[zen-glance-tab]')) return;
+      const element = target?.closest?.('tab-group[split-view-group]');
+      if (!element || !browser.tabContainer.contains(element) ||
+          !splitter._data.some(group => group.tabs.some(tab => tab.group === element)) ||
+          typeof browser.removeTabGroup !== 'function') return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (event.type !== 'click' || pendingGroups.has(element)) return;
+      pendingGroups.add(element);
+      // Native group removal checks every beforeunload handler before closing
+      // any pane, and records the closed group for Undo Close.
+      Promise.resolve(browser.removeTabGroup(element, {
+        animate: true,
+        metricsContext: browser.TabMetrics?.userTriggeredContext(
+          browser.TabMetrics.METRIC_SOURCE.MIDDLE_CLICK),
+      })).catch(error => win.console.error('[Alt-click Split View]', error))
+        .finally(() => pendingGroups.delete(element));
+    };
+    for (const type of ['mousedown', 'click']) win.addEventListener(type, middleClick, true);
+    return () => {
+      if (destroyed) return;
+      destroyed = true;
+      for (const type of ['mousedown', 'click']) win.removeEventListener(type, middleClick, true);
+      for (const restore of cleanup.reverse()) restore();
     };
   }
 
@@ -327,13 +418,13 @@
   }
 
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { shouldSplitLinkClick, installHoverFocus, installAdaptiveSplits, installExistingSplitCommand };
+    module.exports = { shouldSplitLinkClick, installHoverFocus, installAdaptiveSplits, installExistingSplitCommand, installSplitClosing };
     return;
   }
 
   window.AltClickSplitView?.destroy({ reloading: true });
   const hookKey = '__altClickSplitViewHook';
-  let cleanup, cleanupHover, cleanupSplits, cleanupAdaptive, cleanupExisting, cleanupStartup;
+  let cleanup, cleanupHover, cleanupSplits, cleanupAdaptive, cleanupExisting, cleanupClosing, cleanupStartup;
   let destroyed = false;
   const report = error => console.error('[Alt-click Split View]', error);
   const enabled = () => Services.prefs.getBoolPref(ENABLED_PREF, true);
@@ -565,6 +656,8 @@
     destroyed = true;
     cleanupStartup?.();
     cleanupStartup = null;
+    cleanupClosing?.();
+    cleanupClosing = null;
     cleanupAdaptive?.();
     cleanupAdaptive = null;
     cleanupExisting?.();
@@ -580,7 +673,7 @@
   }
 
   const unload = () => destroy({ reloading: true });
-  const api = { version: '1.4.6-local', status: 'starting', destroy };
+  const api = { version: '1.4.7-local', status: 'starting', destroy };
   window.AltClickSplitView = api;
   for (const pref of [ENABLED_PREF, TRIGGER_PREF, HOVER_PREF, ADAPTIVE_PREF]) {
     Services.prefs.setBoolPref(`services.sync.prefs.sync.${pref}`, false);
@@ -611,6 +704,7 @@
     cleanupSplits = preserveLivePages();
     cleanupExisting = installExistingSplitCommand(window, Services.prefs);
     cleanupAdaptive = installAdaptiveSplits(window, Services.prefs);
+    cleanupClosing = installSplitClosing(window, Services.prefs);
     api.status = 'ready';
   })().catch(error => {
     api.status = 'error';
