@@ -2,10 +2,10 @@
   "id": "tree-tabs-prototype",
   "name": "Tree Tabs Prototype",
   "description": "Parent and child tabs in Zen's sidebar, with collapsible branches.",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "author": "Local",
   "createdAt": "2026-10-29",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-10",
   "homepage": "https://github.com/toby-wong/sine-mods/tree/main/tree-tabs-prototype",
   "fork": [
     "zen"

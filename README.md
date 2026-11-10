@@ -9,7 +9,7 @@ through [Sine](https://github.com/CosmoCreeper/Sine).
 | --- | --- | --- |
 | [Little Zen](little-zen/) | 0.1.0 | Opens a compact temporary browsing window. **Open in Space** moves the live page into a normal window, preserving its state and container. |
 | [Auto Glance](auto-glance/) | 0.2.3 | Opens website-created tabs as Glance previews, keeps Mac Command-click as a normal background tab, and adds configurable Space-coloured backdrop opacity. |
-| [Tree Tabs Prototype](tree-tabs-prototype/) | 0.1.2 | Adds collapsible parent/child relationships to ordinary tabs. Branches move together, and expanded Glances nest beneath their originating tree tab. |
+| [Tree Tabs Prototype](tree-tabs-prototype/) | 0.1.3 | Adds collapsible parent/child relationships to ordinary tabs. Alt+Shift+Right/Left nest and outdent whole branches; expanded Glances nest beneath their originating tree tab. |
 | [Alt-click Split View — local fork](alt-click-split-view/) | 1.4.7-local | Preserves live pages when splitting, adds third/fourth panes, and supports whole-group middle-click closure with stable pane focus. Stacks new split pairs in tall windows. Based on Kostiantyn Kugot's mod. |
 | [Keyword Tab Search](keyword-tab-search/) | 0.1.2 | Activates an existing search keyword with Tab, including `keyword` for a saved `@keyword` alias, and keeps searches in a pending split pane. |
 | [Find Bar Pane Fix](findbar-pane-fix/) | 0.1.4 | Keeps Cmd/Ctrl+F inside its pane, with configurable styling and optional scaling with page zoom. |
@@ -43,7 +43,9 @@ browser behavior has **not** been tested.
   Essentials, native groups, Glance previews, private windows, and Little Zen windows are
   excluded. Expanding a Glance can nest it under its ordinary source tab.
   The experimental split-session tree support was reverted. Use
-  **right-click a tab → Tree tabs** to nest or outdent deliberately.
+  **Alt+Shift+Right/Left** (Option on Mac), or **right-click a tab → Tree tabs**,
+  to nest or outdent deliberately. The shortcuts preserve editor selection
+  controls and can be disabled in the mod's settings.
 - **Split View:** **Option-click** on Mac / **Alt-click** on Windows is the default.
   It uses each platform's native tab accelerator internally. Windows and Linux
   routing have automated coverage; live browser checks have run on macOS.

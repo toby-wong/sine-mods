@@ -1,6 +1,6 @@
 # Prototype history
 
-The active version is **0.1.2**. Split sessions use Zen's normal sidebar
+The active version is **0.1.3**. Split sessions use Zen's normal sidebar
 behavior and do not participate in the prototype's tree.
 
 The repository was created after the first two prototypes were deployed.
@@ -15,6 +15,7 @@ recorded, not the original deployment times.
 | `tree-tabs-prototype/prototype/v0.1.0-restored` | Restored ordinary-tab prototype, with the split-session change reverted. |
 | `tree-tabs-prototype/prototype/v0.1.1` | Whole branches follow sidebar moves and moves between Spaces. |
 | `tree-tabs-prototype/prototype/v0.1.2` | Expanded Glances become children of their originating ordinary tabs. |
+| `tree-tabs-prototype/prototype/v0.1.3` | Alt+Shift+Arrow shortcuts nest and outdent ordinary tab branches, preserving editor selection. |
 
 The v0.2.0 automated tests and installation checks passed, but did not catch
 the subsequent user-visible problem. Its root cause has not been established.
@@ -84,3 +85,20 @@ existing tabs, documents, tree relationships, Spaces, split layouts, and other
 mod instances, with native split rows still visible. Backups and reports remain
 outside Git. This update does not change the persistence schema or reintroduce
 the reverted split-session tree experiment.
+
+## v0.1.3 validation
+
+The shortcut update passed 41 keyboard checks, 25 existing Tree Tabs checks,
+17 branch-move checks, and 21 Glance-promotion checks in a disposable Zen 1.24b
+profile on macOS. The shared installer's nine checks also passed.
+
+Trusted browser input covers Alt+Shift+Right/Left from the sidebar, web pages,
+and frames; browser-routed input also retains native word selection in inputs,
+textareas, contenteditable elements, and the address bar. Checks preserve whole
+branches, collapse state, selection, document identities, drafts, request counts,
+and native split members. Modifier matching, page cancellation, untrusted events,
+held keys, live settings changes, and repeated reload/unload are covered.
+
+The persistence format and native split/group exclusions are unchanged.
+Windows desktop input has not been validated. Reports and profile backups
+remain outside Git.

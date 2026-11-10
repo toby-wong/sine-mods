@@ -13,8 +13,14 @@
     "defaultValue": true
   },
   {
+    "property": "uc.tree-tabs.keyboard-shortcuts",
+    "label": "Alt+Shift+Arrow shortcuts for nesting tabs",
+    "type": "checkbox",
+    "defaultValue": true
+  },
+  {
     "type": "text",
-    "label": "Use the arrow beside a parent tab to collapse its children. Right-click a tab → Tree tabs to nest existing tabs or move them out one level. Groups, pins, Essentials, splits and Glance previews are outside this prototype.",
+    "label": "Alt+Shift+Right nests the selected tab under the previous ordinary tab. Alt+Shift+Left moves it out one level. On macOS use Option for Alt. Children move with their parent. You can also right-click a tab → Tree tabs. Groups, pins, Essentials, splits and Glance previews are outside this prototype.",
     "size": "13px"
   }
 ]

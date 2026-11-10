@@ -15,6 +15,11 @@ Zen's existing sidebar.
 - **Select a hidden child through a shortcut:** its ancestors expand.
 - **Right-click a tab → Tree tabs:** nest it under the previous ordinary tab,
   move it out one level, or expand the current Space's branches.
+- **Alt+Shift+Right:** nest the selected tab under the previous ordinary tab in
+  its Space. **Alt+Shift+Left:** move it out one level. On macOS use **Option**
+  for Alt. Its children follow, and the selected page stays focused.
+  These shortcuts work from the sidebar and web pages, including frames.
+  Inputs, textareas, and editable content retain their text-selection shortcuts.
 - **Close a parent:** its children remain open and move up a level.
 - **Move a parent in the sidebar or to another Space:** its whole branch follows,
   including collapsed children and grandchildren, in the same order.
@@ -62,7 +67,8 @@ does not have that override.
 ## Settings and undo
 
 Open **Zen Settings → Sine → Tree Tabs Prototype → Configure** to enable or
-disable tree tabs or automatic nesting.
+disable tree tabs, automatic nesting, or **Alt+Shift+Arrow shortcuts for nesting
+tabs**. The shortcut toggle takes effect immediately. Alt+Tab is not used.
 
 Disabling or removing the mod restores a flat sidebar without closing or
 reloading pages. Saved relationships remain inert in session data, so enabling
@@ -98,6 +104,12 @@ selection preservation, and Zen's native drop handler and animation cleanup.
 collapsed origins, sibling order, draft/document preservation, native split
 promotion, excluded origins, settings, saved relationships, and unloading
 while a promotion is in flight.
+
+`tests/keyboard.py` exercises trusted Alt+Shift+Arrow input from browser chrome,
+pages, and frames. It checks branch order and collapse state, editor selection,
+shortcut cancellation, modifier matching, rejected page-generated events,
+settings changes, document/draft preservation, native splits, and reload/unload.
+It accepts the same `--profile`, `--port`, and `--report` arguments.
 
 `tests/integration.py` refuses to operate unless the browser's active profile
 matches the supplied disposable `test-profile` path.

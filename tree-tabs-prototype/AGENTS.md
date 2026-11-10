@@ -2,8 +2,12 @@
 
 ## Current status
 
-- Source baseline: **0.1.2**. Ordinary tabs support opener-based nesting,
+- Source baseline: **0.1.3**. Ordinary tabs support opener-based nesting,
   collapse/expand, menu-based nesting/outdenting, and session-persisted tree state.
+- Alt+Shift+Right nests the selected ordinary tab under its previous ordinary
+  tab in the same Space; Alt+Shift+Left outdents one level. Descendants follow,
+  preserving focus, live pages, and collapse state. A Sine checkbox controls
+  `uc.tree-tabs.keyboard-shortcuts`, enabled by default.
 - Moving a parent carries its entire branch in sidebar order and across Spaces.
   Nested branch moves detach the moved root; parent/child multi-selection retains
   the relationship. Closing a parent promotes its children.
@@ -18,6 +22,9 @@
   Do not restore that implementation as if it were a working feature.
 - Historical macOS validation and its limits are documented in
   [PROTOTYPES.md](PROTOTYPES.md). Windows browser behavior remains untested.
+- Current validation on disposable macOS Zen 1.24b: 41 keyboard checks, 25 core
+  checks, 17 branch-move checks, and 21 Glance-promotion checks passed, alongside
+  the shared installer's nine checks.
 
 ## Implementation constraints
 
@@ -37,6 +44,20 @@
   flat sidebar without closing pages; collapsing does not unload documents.
 - Keep controller/manifest versions and the shared installer's CSS/controller
   file list aligned. Install into the profile, never into the signed application.
+- Keyboard handling uses chrome keys and a content actor. On macOS, non-reserved
+  native keys alone lose Option+Shift+Arrow to page selection even outside editors.
+  The actor accepts only trusted, exact gestures outside editors, respects page
+  cancellation, and ignores repeats. Chrome capture handles sidebar focus before
+  native tab-strip arrow handling; it must skip browser/content targets.
+- The parent rechecks the selected browser and ordinary-tab eligibility before
+  acting. Match an owning window by its document: `browser.ownerGlobal` is not
+  necessarily the same wrapper used by Sine's script. Register actors for
+  untrusted web processes explicitly; unregister when the last owning window
+  unloads. Context messages refresh on page load, selection, and settings changes.
+- Preserve `TreeTabsShortcutChild.sys.mjs` and `TreeTabsShortcutParent.sys.mjs` in
+  installations. Do not reserve editor selection shortcuts or bind Windows'
+  Alt+Tab application switcher. Actor modules are cached for the process lifetime;
+  restart only the disposable test process when developing module changes.
 
 ## Validation for runtime changes
 
@@ -48,13 +69,17 @@ localhost (default port `2832`), run:
 python3 tree-tabs-prototype/tests/integration.py --profile /path/to/test-profile --report /path/to/reports/tree.json
 python3 tree-tabs-prototype/tests/branch_moves.py --profile /path/to/test-profile --report /path/to/reports/branches.json
 python3 tree-tabs-prototype/tests/glance_promotion.py --profile /path/to/test-profile --report /path/to/reports/promotion.json
+python3 tree-tabs-prototype/tests/keyboard.py --profile /path/to/test-profile --report /path/to/reports/keyboard.json
 ```
 
-All three suites verify the connected profile. Also run Auto Glance integration after
+All suites verify the connected profile. Also run Auto Glance integration after
 opener/click changes, and check restart restoration after persistence changes.
 The recorded branch-move suite exercises a synthesized native drop; macOS pointer
 automation did not reliably deliver a physical drop. Confirm actual dragging and
 visible split rows manually before claiming that interaction is validated.
+The keyboard suite covers both content-targeted input and input routed through
+browser chrome. Create untrusted test events in the served page's own realm:
+events constructed by the privileged test sandbox can be trusted by Gecko.
 
 ## Potential future direction
 

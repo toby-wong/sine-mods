@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name           Tree Tabs Prototype
-// @version        0.1.2
+// @version        0.1.3
 // @description    Parent and child tabs in Zen's existing sidebar.
 // @include        chrome://browser/content/browser.xhtml
 // ==/UserScript==
@@ -15,6 +15,8 @@
   const pendingParents = new Map();
   const pendingMoves = new Set();
   const cleanups = [];
+  const shortcutKeys = [];
+  const shortcutContexts = new WeakMap();
   let destroyed = false;
   let moving = 0;
   let timer = 0;
@@ -28,6 +30,8 @@
     gBrowser.isTab(tab) && !tab.pinned && !tab.group && !tab.splitview &&
     !["zen-essential", "zen-glance-tab", "zen-empty-tab", "split-view",
       "zen-live-folder-item-id"].some(attribute => tab.hasAttribute(attribute));
+  const shortcutsEnabled = () => enabled() &&
+    Services.prefs.getBoolPref(PREFIX + "keyboard-shortcuts", true);
   const report = error => {
     api.lastError = String(error);
     console.error("[Tree Tabs]", error);
@@ -179,6 +183,7 @@
 
   function render() {
     const active = enabled();
+    updateShortcutKeys();
     const indent = Math.max(8, Math.min(28,
       Services.prefs.getIntPref(PREFIX + "indent", 14)));
     document.documentElement.style.setProperty("--uc-tree-indent", `${indent}px`);
@@ -387,6 +392,110 @@
     cleanups.push(() => target.removeEventListener(type, handler, options));
   }
 
+  function previousOrdinaryTab(tab) {
+    const tabs = allTabs();
+    return tabs.slice(0, tabs.indexOf(tab)).reverse().find(previous =>
+      eligible(previous) && workspace(previous) === workspace(tab));
+  }
+
+  function updateShortcutKeys() {
+    const active = shortcutsEnabled() && eligible(gBrowser.selectedTab) &&
+      !window.gZenGlanceManager?.getFocusedTab();
+    for (const key of shortcutKeys) {
+      key.setAttribute("disabled", String(!active));
+    }
+    for (const id of ["uc-tree-nest", "uc-tree-outdent"]) {
+      const item = document.getElementById(id);
+      if (shortcutsEnabled()) item?.setAttribute("key", id + "-key");
+      else item?.removeAttribute("key");
+    }
+    if (!shortcutKeys.length) return;
+    const updateContext = context => {
+      if (!context) return;
+      const global = context.currentWindowGlobal;
+      if (global && shortcutContexts.get(global) !== active) {
+        try {
+          global.getActor("TreeTabsShortcut").sendAsyncMessage("TreeTabs:Context", {enabled: active});
+          shortcutContexts.set(global, active);
+        } catch {
+          // A navigating frame may not have its actor yet; pageshow refreshes it.
+        }
+      }
+      for (const child of context.children) updateContext(child);
+    };
+    updateContext(gBrowser.selectedBrowser?.browsingContext);
+  }
+
+  function canHandleShortcut(browser) {
+    return api.status === "ready" && shortcutsEnabled() &&
+      browser === gBrowser.selectedBrowser && eligible(gBrowser.selectedTab) &&
+      !window.gZenGlanceManager?.getFocusedTab();
+  }
+
+  function handleShortcut(action, browser) {
+    if (!canHandleShortcut(browser)) return false;
+    const tab = gBrowser.selectedTab;
+    try {
+      if (action === "nest") return nest(tab, previousOrdinaryTab(tab));
+      if (action === "outdent") return outdent(tab);
+    } catch (error) { report(error); }
+    return false;
+  }
+
+  function installKeyboardShortcuts() {
+    const { registerShortcutActors } = ChromeUtils.importESModule(
+      "chrome://sine/content/tree-tabs-prototype/TreeTabsShortcutParent.sys.mjs");
+    cleanups.push(registerShortcutActors(window));
+    listen(window, "keydown", event => {
+      if (!event.isTrusted || event.defaultPrevented || event.isComposing ||
+          !event.altKey || !event.shiftKey || event.ctrlKey || event.metaKey ||
+          !["ArrowRight", "ArrowLeft"].includes(event.key) ||
+          !canHandleShortcut(gBrowser.selectedBrowser)) return;
+      const focused = document.commandDispatcher.focusedElement;
+      if (gURLBar.focused || focused?.isContentEditable ||
+          focused?.closest("input, textarea, textbox") ||
+          event.composedPath().some(element => element.localName === "browser")) return;
+      // Handle chrome focus before the native tab strip interprets an arrow.
+      // Content focus goes through the actor, which can recognize page editors.
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (!event.repeat) {
+        handleShortcut(event.key === "ArrowRight" ? "nest" : "outdent",
+          gBrowser.selectedBrowser);
+      }
+    }, {capture: true});
+    const keyset = document.createXULElement("keyset");
+    keyset.id = "uc-tree-tabs-keys";
+    for (const [id, keycode, action] of [
+      ["uc-tree-nest", "VK_RIGHT", "nest"],
+      ["uc-tree-outdent", "VK_LEFT", "outdent"],
+    ]) {
+      const key = document.createXULElement("key");
+      key.id = id + "-key";
+      key.setAttribute("keycode", keycode);
+      key.setAttribute("modifiers", "alt,shift");
+      // Non-reserved keys let page editors handle their selection shortcuts first.
+      key.setAttribute("reserved", "false");
+      key.setAttribute("oncommand", "void 0;");
+      listen(key, "command", event => {
+        if (!event.isTrusted || !shortcutsEnabled() ||
+            event.sourceEvent?.repeat || event.sourceEvent?.isComposing) return;
+        const focused = document.commandDispatcher.focusedElement;
+        if (gURLBar.focused || focused?.isContentEditable ||
+            focused?.closest("input, textarea, textbox")) return;
+        handleShortcut(action, gBrowser.selectedBrowser);
+      });
+      shortcutKeys.push(key);
+      keyset.append(key);
+    }
+    document.documentElement.append(keyset);
+    cleanups.push(() => {
+      keyset.remove();
+      shortcutKeys.length = 0;
+    });
+    updateShortcutKeys();
+  }
+
   function installGlancePromotion() {
     const manager = window.gZenGlanceManager;
     if (typeof manager?.fullyOpenGlance !== "function" ||
@@ -432,11 +541,6 @@
     menu.append(popup);
     parentMenu.append(menu);
     const context = () => window.TabContextMenu?.contextTab;
-    const previous = tab => {
-      const tabs = allTabs();
-      return tabs.slice(0, tabs.indexOf(tab)).reverse().find(t =>
-        eligible(t) && workspace(t) === workspace(tab));
-    };
     const item = (id, label, action) => {
       const element = document.createXULElement("menuitem");
       element.id = id;
@@ -447,7 +551,8 @@
       popup.append(element);
       return element;
     };
-    const nestItem = item("uc-tree-nest", "Nest under previous tab", tab => nest(tab, previous(tab)));
+    const nestItem = item("uc-tree-nest", "Nest under previous tab",
+      tab => nest(tab, previousOrdinaryTab(tab)));
     const outdentItem = item("uc-tree-outdent", "Move out one level", outdent);
     const collapseItem = item("uc-tree-collapse", "Collapse child tabs", toggleCollapse);
     item("uc-tree-expand-all", "Expand all branches in this Space", expandAll);
@@ -456,7 +561,7 @@
       const tab = context();
       const node = nodes.get(tab);
       menu.hidden = !enabled() || !eligible(tab);
-      nestItem.disabled = !previous(tab);
+      nestItem.disabled = !previousOrdinaryTab(tab);
       outdentItem.disabled = !node?.parent;
       collapseItem.disabled = !node?.children.length;
       collapseItem.setAttribute("label", node?.collapsed ? "Expand child tabs" : "Collapse child tabs");
@@ -490,7 +595,7 @@
     }
     const style = document.createElementNS("http://www.w3.org/1999/xhtml", "link");
     style.rel = "stylesheet";
-    style.href = "chrome://sine/content/tree-tabs-prototype/tree-tabs.css?v=0.1.2";
+    style.href = "chrome://sine/content/tree-tabs-prototype/tree-tabs.css?v=0.1.3";
     document.documentElement.append(style);
     cleanups.push(() => style.remove());
 
@@ -515,7 +620,10 @@
       if (!moving && enabled() && node) pendingMoves.add(node);
       if (!moving) schedule();
     });
-    listen(window, "TabSelect", () => revealSelected());
+    listen(window, "TabSelect", () => {
+      revealSelected();
+      updateShortcutKeys();
+    });
     for (const type of ["TabPinned", "TabUnpinned", "TabGrouped", "TabUngrouped", "SSWindowStateReady"]) {
       listen(window, type, () => schedule());
     }
@@ -532,10 +640,14 @@
       attributeFilter: ["zen-workspace-id", "zen-glance-tab", "split-view", "zen-essential", "pinned"],
     });
     cleanups.push(() => observer.disconnect());
-    const prefObserver = { observe: () => schedule() };
+    const prefObserver = { observe: () => {
+      updateShortcutKeys();
+      schedule();
+    } };
     Services.prefs.addObserver(PREFIX, prefObserver);
     cleanups.push(() => Services.prefs.removeObserver(PREFIX, prefObserver));
     installGlancePromotion();
+    installKeyboardShortcuts();
     installMenu();
     reconcile();
     api.status = "ready";
@@ -557,8 +669,9 @@
   }
 
   const api = window.TreeTabs = {
-    version: "0.1.2", status: "starting", reconciliations: 0, lastReconcileMs: 0,
+    version: "0.1.3", status: "starting", reconciliations: 0, lastReconcileMs: 0,
     nest, outdent, toggleCollapse, expandAll, destroy,
+    canHandleShortcut, handleShortcut,
     parentOf: tab => nodes.get(tab)?.parent?.tab || null,
     depthOf: tab => depth(nodes.get(tab)),
     snapshot: () => [...nodes.values()].filter(n => eligible(n.tab)).map(n => ({

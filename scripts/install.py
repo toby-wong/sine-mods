@@ -21,7 +21,10 @@ MOD_FILES = {
     "auto-glance": COMMON + (
         "auto-glance.uc.js", "auto-glance.css", "AutoGlanceClickChild.sys.mjs",
     ),
-    "tree-tabs-prototype": COMMON + ("tree-tabs.uc.js", "tree-tabs.css"),
+    "tree-tabs-prototype": COMMON + (
+        "tree-tabs.uc.js", "tree-tabs.css",
+        "TreeTabsShortcutChild.sys.mjs", "TreeTabsShortcutParent.sys.mjs",
+    ),
     "alt-click-split-view": COMMON + (
         "alt-click-split-view.uc.js", "settings.uc.js",
         "AltClickSplitViewChild.sys.mjs", "LICENSE",
