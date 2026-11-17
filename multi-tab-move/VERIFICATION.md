@@ -1,5 +1,40 @@
 # Multi Tab Move validation
 
+## Version 0.2.0 — split-session tree branches
+
+Validated with Tree Tabs 0.3.0 on disposable macOS Zen 1.24.1b and Advanced
+Tab Groups 3.10.0. The focused split-tree suite passed 118 checks, including
+trusted Shift-click and pointer dragging of a split with tree descendants into
+a collapsed group, moving the branch between Spaces, split-under-split trees
+and unloaded children with zero page requests. The existing native wrappers,
+pane order, layouts, documents and focus stayed intact. A real restart passed
+13 checks for two-, three- and four-pane split trees and their folder placement.
+
+The shared installer passed 11 tests, and the existing modifier/split hook Node
+suite passed 14 tests. Browser reports remain outside Git. Physical mouse input
+and Windows desktop input remain unverified.
+
+| Regression suite | Result |
+| --- | --- |
+| Multi Tab Move with pointer dragging | 148 checks passed |
+| Ordinary groups / native folders / sleeping children | 26 / 61 / 4 checks passed |
+| Tree core / branch moves / Glance promotion / keyboard | 26 / 17 / 21 / 41 checks passed |
+| Auto Glance / Keyword Tab Search | 31 / 36 checks passed |
+| Split extension / adaptive layouts / closure / regression cases | 195 / 63 / 114 / 15 checks passed |
+| Split-tree restart without ATG | 13 checks passed |
+| Existing folder-tree restart without ATG | 11 tree nodes, folder hierarchy and native split preserved |
+
+The rendered test sidebar showed two split rows in the same folder tree and
+three visible active panes. A reload with a selected split branch retained all
+explicit/carried selection, native objects, documents, tree/layout state,
+preferences and other controllers.
+
+Live Work activation preserved 140 tabs and five split sessions without a
+browser restart. Personal received the update while closed, with byte-identical
+preferences. Both profile copies matched source; unrelated registry entries and
+enabled states were retained, and the temporary helpers were removed. Personal
+runtime activation remains pending until its next launch.
+
 ## Version 0.1.3 — ordinary tab-group destinations
 
 Validated on November 17, 2026 with macOS Zen 1.24.1b and Tree Tabs 0.1.6:
@@ -151,13 +186,14 @@ split layouts, selected tab, active Space, existing mod preferences and unrelate
 controllers. The other profile remained closed; activation there awaits its next
 launch. No daily browser process was restarted or given remote-debug access.
 
-## Unresolved validation
+## Earlier shortcut-test limitation
 
-The existing split-extension shortcut suite timed out before entering its
-initial New Empty Split mode. The same timeout occurred after unloading Multi
-Tab Move. Its cause remains uninvestigated in this change; this suite is not
-counted as a pass. Moving existing three-/four-pane splits and split closure
-passed separately.
+The 0.1.x split-extension shortcut suite timed out before entering its initial
+New Empty Split mode, including after unloading Multi Tab Move. The 0.2.0
+investigation found that assigning key attributes in the fresh fixture did not
+refresh Gecko's cached keyset. Reinserting that keyset registers the intended
+binding; trusted keyboard input now invokes the command. Those historical
+timeouts remain recorded rather than being retroactively counted as passes.
 
 Cross-window/profile transfers are outside this prototype. Physical macOS mouse
 input, Windows desktop input and activation in the closed profile remain

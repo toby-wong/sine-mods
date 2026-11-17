@@ -9,8 +9,8 @@ through [Sine](https://github.com/CosmoCreeper/Sine).
 | --- | --- | --- |
 | [Little Zen](little-zen/) | 0.1.0 | Opens a compact temporary browsing window. **Open in Space** moves the live page into a normal window, preserving its state and container. |
 | [Auto Glance](auto-glance/) | 0.2.3 | Opens website-created tabs as Glance previews, keeps Mac Command-click as a normal background tab, and adds configurable Space-coloured backdrop opacity. |
-| [Tree Tabs Prototype](tree-tabs-prototype/) | 0.1.6 | Collapsible tab trees inside the sidebar, native folders and ordinary tab groups. Alt+Shift+Right/Left nest and outdent; branches follow folder, group, pin and Space moves. |
-| [Multi Tab Move](multi-tab-move/) | 0.1.3 | Shift-click rows to move branches, folders and split sessions together, create a Space, or close the selection. Supports drops into folders and ordinary tab groups. |
+| [Tree Tabs Prototype](tree-tabs-prototype/) | 0.3.0 | Collapsible trees of tabs and whole split sessions, including inside folders and tab groups. Alt+Shift+Right/Left nest and outdent; branches follow folder, pin and Space moves. |
+| [Multi Tab Move](multi-tab-move/) | 0.2.0 | Shift-click rows to move branches, folders and split sessions with their tree children, create a Space, or close the selection. |
 | [Alt-click Split View — local fork](alt-click-split-view/) | 1.4.7-local | Preserves live pages when splitting, adds third/fourth panes, and supports whole-group middle-click closure with stable pane focus. Stacks new split pairs in tall windows. Based on Kostiantyn Kugot's mod. |
 | [Keyword Tab Search](keyword-tab-search/) | 0.1.2 | Activates an existing search keyword with Tab, including `keyword` for a saved `@keyword` alias, and keeps searches in a pending split pane. |
 | [Find Bar Pane Fix](findbar-pane-fix/) | 0.1.4 | Keeps Cmd/Ctrl+F inside its pane, with configurable styling and optional scaling with page zoom. |
@@ -40,12 +40,12 @@ browser behavior has **not** been tested.
   may therefore become Glance; do not assume it has the Mac override.
   Adjust **Extra backdrop opacity** under its Sine Configure button to make the
   area behind a preview less transparent, without changing the sidebar.
-- **Tree Tabs:** ordinary tabs, pinned tabs and tabs inside native folders or
-  ordinary tab groups participate. Each folder/group has independent trees.
-  This includes groups styled by Advanced Tab Groups. Splits, Essentials,
-  live folders, Glance previews, private windows and Little Zen windows are
-  excluded. Expanded Glances can join their source's folder/group and tree.
-  The experimental split-session tree support was reverted. Use
+- **Tree Tabs:** tabs and whole split sessions participate, including inside
+  native folders and groups styled by Advanced Tab Groups. Each folder/group
+  has independent trees. A split can have a parent and children; its panes
+  remain one native split. Essentials, live folders, Glance previews, private
+  windows and Little Zen windows are excluded. Expanded Glances can join their
+  source's folder/group and tree. Use
   **Alt+Shift+Right/Left** (Option on Mac), or **right-click a tab → Tree tabs**,
   to nest or outdent deliberately. The shortcuts preserve editor selection
   controls and can be disabled in the mod's settings.
@@ -61,7 +61,7 @@ browser behavior has **not** been tested.
   The selection menu also creates a named Space or closes all selected tabs,
   keeping native unsaved-page prompts. Drop on the middle of a folder/group header
   to move inside it; header edges place the selection before/after it.
-  When Tree Tabs is installed, update it to **0.1.6 or later**.
+  When Tree Tabs is installed, update it to **0.3.0 or later**.
 - **Keyword Tab Search:** type an existing search keyword, press **Tab**, type
   your query, and press **Enter**. The same plain Tab gesture works on both
   platforms. Unrecognized text and normal Tab navigation are preserved.

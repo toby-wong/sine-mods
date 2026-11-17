@@ -1,8 +1,8 @@
 # Tree Tabs Prototype
 
-A local Sine mod that adds parent and child relationships to ordinary tabs in
-Zen's existing sidebar, including pinned tabs, native folders and ordinary
-tab groups (including groups styled by Advanced Tab Groups).
+A local Sine mod that adds parent and child relationships to tabs and whole
+split sessions in Zen's existing sidebar, including pinned tabs, native folders
+and ordinary tab groups (including groups styled by Advanced Tab Groups).
 
 ## Use
 
@@ -14,15 +14,22 @@ tab groups (including groups styled by Advanced Tab Groups).
 - **Click the arrow beside a parent tab:** collapse or expand its descendants.
   Collapsing the branch containing the selected tab selects its parent.
 - **Select a hidden child through a shortcut:** its ancestors expand.
-- **Right-click a tab → Tree tabs:** nest it under the previous ordinary tab,
+- **Right-click a tab → Tree tabs:** nest it under the previous tab or split,
   move it out one level, or expand the current Space's branches.
-- **Alt+Shift+Right:** nest the selected tab under the previous ordinary tab in
+- **Alt+Shift+Right:** nest the selected tab or split under the previous item in
   its folder/group and Space. **Alt+Shift+Left:** move it out one level. A root
   stays inside its folder/group. On macOS use **Option**
   for Alt. Its children follow, and the selected page stays focused.
   These shortcuts work from the sidebar and web pages, including frames.
   Inputs, textareas, and editable content retain their text-selection shortcuts.
 - **Close a parent:** its children remain open and move up a level.
+- **Create a split inside a folder:** the split stays in that folder and
+  inherits the source tab's parent and children. Select any pane and use the
+  same tree menu or shortcuts to nest/outdent the whole session. Splits can
+  parent other splits.
+- **Close one split pane:** the session keeps its tree position. If one tab
+  remains, it inherits that position and the children. Separating a split keeps
+  its first surviving pane in that role; the other panes become peers.
 - **Move a parent in the sidebar, into/out of a folder, or to another Space:**
   its whole branch follows, including collapsed children and grandchildren.
   Creating a folder from a parent also carries its branch. Pinning or unpinning
@@ -36,8 +43,8 @@ a restart.
 
 ## Prototype scope
 
-Ordinary tabs, ordinary pinned tabs, and tabs inside native Zen folders or
-ordinary tab groups participate. Each immediate folder/group has independent
+Ordinary tabs, ordinary pinned tabs, whole native splits, and tabs inside native
+Zen folders or ordinary tab groups participate. Each immediate folder/group has independent
 trees; parent and child must share the same container, Space and pinned section.
 Nested folders/groups can have their own trees, and moving a folder/group
 preserves all trees inside it.
@@ -51,19 +58,22 @@ Groups keep their existing type and pin state.
 Folder collapse and individual branch collapse are independent. Expanding a
 folder retains the branch collapse state. Native folder and tree state survive
 a browser restart. Ordinary group-header collapse and nested group-container
-restoration follow Zen and Advanced Tab Groups; Tree Tabs stores the tab tree.
+restoration follow Zen and Advanced Tab Groups. Tree Tabs stores the tree and
+each split's folder placement, which native split restoration otherwise loses.
 Links opened from a tab in a folder and Glances expanded from it enter that
 folder before attaching to their parent. Explicit destinations in another
 folder are respected.
 
-Essentials, split views, live folders and Glance previews
+Essentials, live folders and Glance previews
 remain outside the tree. Private and Little Zen windows are also excluded.
 
 The existing Auto Glance and Option-click split behavior remains available.
 A Glance preview stays outside the tree while it is a preview. Expanding it
 to a normal tab can attach it to its ordinary source tab. Using Glance's
-**Split** button preserves native split membership and does not attach a tree
-child. Split panes remain excluded, even when their split is inside a folder/group.
+**Split** button creates a native split whose single tree node inherits the
+source's position. Tree children sit beside the split wrapper in its folder;
+they never become extra panes. Collapsing a split hides its tree children and
+keeps its own panes visible. The unfinished New Split placeholder is excluded.
 
 Dragging/reordering a nested parent detaches that branch from its former
 parent and carries its descendants with it. Selecting both a parent and a child
@@ -95,7 +105,8 @@ tabs**. The shortcut toggle takes effect immediately. Alt+Tab is not used.
 
 Disabling or removing the mod restores a flat sidebar without closing or
 reloading pages. Saved relationships remain inert in session data, so enabling
-the mod again can restore them.
+the mod again can restore them. Split-folder restoration requires this mod to
+be enabled when saving and restoring the browser session.
 
 The installed files are under the active Zen profile's
 `chrome/sine-mods/tree-tabs-prototype`. The signed Zen.app bundle is unchanged.
@@ -108,7 +119,9 @@ locations. Each run of the shared installer makes a separate backup.
 ## Implementation and checks
 
 The controller uses native tab-opener information, native tab-move APIs,
-per-tab SessionStore values, and batched tab events. It does not poll or read
+per-tab SessionStore values, and batched tab events. Split identity is saved
+on its panes under a separate key; native layout serialization carries only
+the split's containing folder and sibling slot. It does not poll or read
 webpage content. Parent/child relationships are indexed in memory; existing
 tabs acquire saved tree metadata only when they participate.
 
@@ -121,7 +134,7 @@ run with Tree Tabs enabled.
 
 The separate [Multi Tab Move](../multi-tab-move/) mod adds Shift-click selection
 and dragging of multiple branches and native split sessions. Update both mods
-for folder/group support: Tree Tabs **0.1.6** and Multi Tab Move **0.1.3**.
+for split branches: Tree Tabs **0.3.0** and Multi Tab Move **0.2.0**.
 The synchronous `moveBranches(tabs, callback)` integration retains internal tree
 relationships while folders, branches and splits move. Splits remain native.
 
@@ -166,6 +179,17 @@ The local fixture server must receive no requests for that child.
 context-menu commands and content shortcuts, independent collapse, nested groups,
 folder/group/pin/Space moves, sleeping children, and atomic native split moves.
 The restart fixture also includes ordinary groups and nested group trees.
+
+`tests/split_sessions.py` covers splits as parents and children inside both
+container types, trusted menu/keyboard/pointer input, visible rows and panes,
+extension, pane closure/separation, nested split branches, sleeping children,
+folder/Space moves and reload/disable. It requires a `split-tree-test-profile`
+marker in addition to an exact disposable profile path.
+
+`tests/split_restore.py` uses the same prepare/restart/verify workflow as the
+folder restore test. It checks two-, three- and four-pane split trees, folder
+placement, collapse, pane order, layout, selection and restored visibility.
+Add `--advanced-tab-groups` when checking nested ordinary containers.
 
 Bonsai's native tree-tabs implementation informed the scope and edge cases.
 This prototype is implemented for the installed Zen APIs and the local Sine

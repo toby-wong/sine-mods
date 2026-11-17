@@ -131,6 +131,8 @@ def run(args):
           const key=document.getElementById("zen-new-empty-split-view");
           key.setAttribute("key","T");
           key.setAttribute("modifiers",arguments[0]);
+          const set=key.parentNode,parent=set.parentNode,next=set.nextSibling;
+          set.remove();parent.insertBefore(set,next);
           window.__keywordMainTab=gBrowser.selectedTab;
           return true;
         """, ["accel,control,shift" if is_mac else "accel,alt,shift"])

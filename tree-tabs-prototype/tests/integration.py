@@ -292,11 +292,11 @@ def run(args):
           return {split:ttRoot.hasAttribute("split-view"),
             styled:ttRoot.hasAttribute("uc-tree-node"),
             context:ttRoot.linkedBrowser.browsingContext.id,
-            childrenPromoted:TreeTabs.parentOf(ttChild)===null};
+            childrenRetained:TreeTabs.parentOf(ttChild)===ttRoot.group};
         """)
-        check("option_split_preserves_source_and_excludes_tree", split,
+        check("option_split_preserves_source_and_tree_children", split,
               split["split"] and not split["styled"] and
-              split["context"] == original_context and split["childrenPromoted"])
+              split["context"] == original_context and split["childrenRetained"])
 
         m.js("""
           window.ttCloseParent=gBrowser.addTrustedTab("about:blank",{inBackground:true});

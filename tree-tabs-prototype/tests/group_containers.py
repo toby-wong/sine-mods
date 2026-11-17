@@ -213,23 +213,28 @@ def run(args):
         m.js("""
           gZenViewSplitter.splitTabs([gt.splitA,gt.splitB],"vsep",0,{activate:false});
           gt.split=gt.splitA.group;
-          gt.layout=JSON.stringify(gZenViewSplitter.storeDataForSessionStore().find(s=>s.groupId===gt.split.id));
+          gt.nativeLayout=()=>{
+            const {ucTreeContainer,...native}=gZenViewSplitter.storeDataForSessionStore()
+              .find(s=>s.groupId===gt.split.id);
+            return JSON.stringify(native);
+          };
+          gt.layout=gt.nativeLayout();
           MultiTabMove.toggle(gt.splitA);
           gt.splitMove=MultiTabMove.move({workspace:gt.source,folder:gt.group});
           MultiTabMove.clear();
         """)
         settle()
-        check("complete_split_moves_into_group_without_becoming_tree",
-              "gt.splitMove && gt.split.group===gt.group && gt.splitA.group===gt.split && gt.splitB.group===gt.split && !TreeTabs.nest(gt.splitA,gt.root) && !TreeTabs.nest(gt.root,gt.splitB)")
+        check("complete_split_moves_into_group_as_one_tree_node",
+              "gt.splitMove && gt.split.group===gt.group && gt.splitA.group===gt.split && gt.splitB.group===gt.split && TreeTabs.nest(gt.splitA,gt.root) && TreeTabs.parentOf(gt.splitB)===gt.root && !TreeTabs.nest(gt.root,gt.splitB)")
         check("split_layout_and_rows_preserved",
-              "JSON.stringify(gZenViewSplitter.storeDataForSessionStore().find(s=>s.groupId===gt.split.id))===gt.layout && [gt.splitA,gt.splitB].every(t=>!t.hasAttribute('uc-tree-node') && !t.hasAttribute('uc-tree-hidden'))")
+              "gt.nativeLayout()===gt.layout && [gt.splitA,gt.splitB].every(t=>!t.hasAttribute('uc-tree-node') && !t.hasAttribute('uc-tree-hidden'))")
         # Inactive/restoring split panes may not have individual split attributes.
         m.js("""
           gt.splitAttributes=[gt.splitA,gt.splitB].map(t=>t.getAttribute("split-view"));
           for(const tab of [gt.splitA,gt.splitB])tab.removeAttribute("split-view");
         """)
         settle()
-        check("split_group_alone_excludes_its_panes",
+        check("same_session_panes_cannot_nest_into_each_other",
               "!TreeTabs.nest(gt.splitB,gt.splitA) && [gt.splitA,gt.splitB].every(t=>!t.hasAttribute('uc-tree-node'))")
         m.js("""[gt.splitA,gt.splitB].forEach((t,i)=>{
           if(gt.splitAttributes[i]!==null)t.setAttribute("split-view",gt.splitAttributes[i]);

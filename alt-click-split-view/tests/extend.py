@@ -245,6 +245,9 @@ def run(args):
           Services.prefs.setBoolPref('uc.alt-click-split-view.adaptive-direction',true);
           const key=document.getElementById('zen-new-empty-split-view');
           key.setAttribute('key','T');key.setAttribute('modifiers',arguments[1]);
+          // Gecko caches bindings when the keyset is inserted.
+          const set=key.parentNode,parent=set.parentNode,next=set.nextSibling;
+          set.remove();parent.insertBefore(set,next);
           const {SearchService}=ChromeUtils.importESModule('moz-src:///toolkit/components/search/SearchService.sys.mjs');
           await SearchService.init();
           const old=SearchService.getEngineByName('Extend split test');
@@ -399,6 +402,8 @@ def run(args):
               await gZenStartup.promiseInitialized;await AltClickSplitView.ready;
               const key=document.getElementById('zen-new-empty-split-view');
               key.setAttribute('key','T');key.setAttribute('modifiers',arguments[0]);
+              const set=key.parentNode,parent=set.parentNode,next=set.nextSibling;
+              set.remove();parent.insertBefore(set,next);
               return true;
             """, ["accel,control,shift" if is_mac else "accel,alt,shift"])
             check("private_context", m.js("return PrivateBrowsingUtils.isWindowPrivate(window);"))

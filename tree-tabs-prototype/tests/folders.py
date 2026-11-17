@@ -207,11 +207,11 @@ def run(args):
         original = m.js(STATE)
         report["versions"] = m.js("return {tree:TreeTabs.version,multi:MultiTabMove.version,zen:Services.appinfo.version};")
         m.js("""
-          MultiTabMove.toggle(ft.root);TreeTabs.supportsGroupTrees=false;
+          MultiTabMove.toggle(ft.root);TreeTabs.supportsSplitTrees=false;
           ft.oldTreeRejected=false;
           try {MultiTabMove.move({workspace:ft.source,anchor:ft.outside,before:true});}
-          catch(error){ft.oldTreeRejected=error.message.includes("0.1.6");}
-          finally{TreeTabs.supportsGroupTrees=true;MultiTabMove.clear();}
+          catch(error){ft.oldTreeRejected=error.message.includes("0.3.0");}
+          finally{TreeTabs.supportsSplitTrees=true;MultiTabMove.clear();}
         """)
         check("older_tree_controller_is_rejected_before_move", "ft.oldTreeRejected")
         state = preserved("old_tree_rejection_preserves_documents")
@@ -357,14 +357,19 @@ def run(args):
         m.js("""
           gZenViewSplitter.splitTabs([ft.a,ft.b,ft.c],'vsep',0,{activate:false});
           ft.split=ft.a.group;
-          ft.layout=JSON.stringify(gZenViewSplitter.storeDataForSessionStore().find(s=>s.groupId===ft.split.id));
+          ft.nativeLayout=()=>{
+            const {ucTreeContainer,...native}=gZenViewSplitter.storeDataForSessionStore()
+              .find(s=>s.groupId===ft.split.id);
+            return JSON.stringify(native);
+          };
+          ft.layout=ft.nativeLayout();
           MultiTabMove.toggle(ft.b);MultiTabMove.toggle(ft.root);
           MultiTabMove.move({workspace:ft.source,folder:ft.folder});
         """)
         preserved("mixed_split_and_branch_folder_move")
         check("split_wrapper_is_preserved_inside_folder",
-              "ft.a.group===ft.split && ft.b.group===ft.split && ft.c.group===ft.split && ft.split.group===ft.folder && JSON.stringify(gZenViewSplitter.storeDataForSessionStore().find(s=>s.groupId===ft.split.id))===ft.layout")
-        check("split_members_remain_outside_tree",
+              "ft.a.group===ft.split && ft.b.group===ft.split && ft.c.group===ft.split && ft.split.group===ft.folder && ft.nativeLayout()===ft.layout")
+        check("split_panes_have_no_individual_tree_ui",
               "[ft.a,ft.b,ft.c].every(t=>!t.hasAttribute('uc-tree-node') && !TreeTabs.parentOf(t))")
         m.js("MultiTabMove.move({workspace:ft.source,anchor:ft.outside,before:false});")
         preserved("mixed_split_and_branch_move_out_to_normal_tabs")

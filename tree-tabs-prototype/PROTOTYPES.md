@@ -1,7 +1,8 @@
 # Prototype history
 
-The active version is **0.1.6**. Split sessions use Zen's normal sidebar
-behavior and do not participate in the prototype's tree.
+The active version is **0.3.0**. A whole native split session can be a parent or
+child in the tree, including inside folders. Its actual panes and layout remain
+owned by Zen.
 
 The repository was created after the first two prototypes were deployed.
 Their commits were reconstructed from the saved source snapshots, followed
@@ -19,12 +20,76 @@ recorded, not the original deployment times.
 | `tree-tabs-prototype/prototype/v0.1.4` | Branch-preserving synchronous move API for Multi Tab Move; split sessions remain native. |
 | `tree-tabs-prototype/prototype/v0.1.5` | Independent trees inside native folders, preserving branches across folder, pin and Space moves. |
 | `tree-tabs-prototype/prototype/v0.1.6` | Tree controls inside ordinary tab groups, including Advanced Tab Groups; preserve group type, pin state and native split ownership. |
+| `tree-tabs-prototype/prototype/v0.3.0` | Whole split sessions as tree nodes inside folders/groups, with branch moves, lifecycle transfer and split-folder restoration. |
 
 The v0.2.0 automated tests and installation checks passed, but did not catch
 the subsequent user-visible problem. Its root cause has not been established.
 The rollback restored the previous source and stylesheet, removed the
 split-specific tree metadata, and preserved the current tabs and split
 layouts. A live check confirmed the restored version and visible split rows.
+
+## v0.3.0 validation
+
+The user explicitly requested a split session as a parent/child node inside a
+folder. This implementation builds on 0.1.6 and keeps a single node for the
+actual native split wrapper. Tree descendants remain siblings of that wrapper,
+and its twisty is outside the native pane container. The separate
+`uc-tree-tabs-split-state` key stores the session's identity on its real panes.
+
+Disposable macOS Zen 1.24.1b reproduced two native gaps: creating a split
+hoisted it out of an ordinary group, and restart flattened split-folder
+placement even with Advanced Tab Groups. Creation now returns the same wrapper
+to the source slot. The `ucTreeContainer` property alongside a copied native
+session entry restores that wrapper's folder/slot without rewriting its layout.
+The hooks install before startup restoration; ATG still owns ordinary wrapper
+hierarchy and header collapse.
+
+The earlier 0.2.0 source was tested separately against a simple nested
+split/collapse/reveal case. That case did not reproduce the historic missing
+row on this Zen version; the historic root cause remains unestablished. Its
+implementation was not restored as the new feature.
+
+The focused suite passed 118 checks with ATG 3.10.0 and Multi Tab Move 0.2.0:
+native folders and ordinary groups, trusted context-menu/keyboard nesting,
+split-under-split trees, visible rows/panes, independent collapse, adding third
+and fourth panes, the real New Split shortcut and cancellation, pane closure,
+whole-row middle-click closure, separation, reversed ancestor/descendant
+combination, pointer-drag folder moves, Space moves, unloaded children,
+document/draft/request preservation, hot reload and settings changes.
+
+A graceful quit/restart passed 13 verification checks for two-, three- and
+four-pane split trees: parent roles, collapse, folder hierarchy, order, native
+layouts, focused tab and visible restored panes. The fixture explicitly enables
+Zen's “continue where left off” setting to test focus restoration; when disabled,
+Zen correctly chooses its empty startup tab. These are test-profile settings.
+The split restore suite also passed all 13 checks without ATG, and the existing
+11-node folder-tree restart fixture retained its hierarchy and native split.
+
+Existing suites passed: 26 ordinary-group, 61 folder, four sleeping-child,
+148 Multi Tab Move, 26 core, 17 branch, 21 Glance-promotion, 41 keyboard,
+31 Auto Glance, 36 Keyword Tab Search, 195 split-extension, 63 adaptive-layout,
+114 split-close and 15 split-regression checks. The 14 modifier/hook Node tests
+and 11 installer tests passed. Promotion coverage now expects an expanded
+Glance from a split to become a tree child beside that split.
+
+Shortcut fixtures now reinsert the keyset after assigning their test binding.
+Without that step, Gecko retained the previous binding and trusted
+Ctrl+Cmd+Shift+T input did not invoke the command. The native command itself
+worked. This is a test setup correction, not a change to browser shortcuts.
+Browser gestures were trusted WebDriver input on macOS; physical mouse input
+and Windows desktop behavior remain unverified.
+
+The rendered browser showed a three-pane split under a parent, ordinary child
+tabs, and a second split as a child. Both split rows and all active panes were
+visible. Reloading with a selected split branch preserved the same tab/group
+objects, tree state, layouts, documents, selection, preferences and companion
+controllers.
+
+Work activated without restart: all 140 tabs and five split sessions at the
+activation snapshot were preserved. Personal was updated while closed; its
+preferences stayed byte-identical. Both installations matched source, retained
+their enabled states and unrelated registry entries, and removed their temporary
+activation helpers. Runtime activation in Personal awaits its next launch.
 
 ## v0.1.1 validation
 

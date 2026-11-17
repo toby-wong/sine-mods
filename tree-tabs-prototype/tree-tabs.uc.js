@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name           Tree Tabs Prototype
-// @version        0.1.6
+// @version        0.3.0
 // @description    Parent and child tabs in Zen's existing sidebar.
 // @include        chrome://browser/content/browser.xhtml
 // ==/UserScript==
@@ -11,9 +11,12 @@
 
   const PREFIX = "uc.tree-tabs.";
   const STORAGE = "uc-tree-tabs-state";
+  const SPLIT_STORAGE = "uc-tree-tabs-split-state";
   const nodes = new Map();
+  const activePanes = new WeakMap();
   const pendingParents = new Map();
   const pendingMoves = new Set();
+  const pendingContainers = new Map();
   const cleanups = [];
   const shortcutKeys = [];
   const shortcutContexts = new WeakMap();
@@ -21,16 +24,34 @@
   let moving = 0;
   let timer = 0;
   let menu;
+  let splitPersistenceInstalled = false;
 
   const enabled = () => !destroyed &&
     Services.prefs.getBoolPref(PREFIX + "enabled", true);
   const allTabs = () => [...gZenWorkspaces.allStoredTabs].filter(t => t.isConnected && !t.closing);
-  const workspace = tab => tab.getAttribute("zen-workspace-id") || "";
+  const isSplit = item => !!item?.hasAttribute("split-view-group");
+  const memberTabs = item => isSplit(item) ? [...item.tabs].filter(tab =>
+    gBrowser.isTab(tab) && tab.isConnected && !tab.closing &&
+    !tab.hasAttribute("zen-empty-tab")) : [item];
   // tab.group also reports the temporary "collapsed pins" display group.
   // Tree ownership follows the actual container, independently of that UI.
   const groupOf = tab => {
     const group = tab?.parentElement?.parentElement;
     return group && gBrowser.isTabGroup(group) ? group : null;
+  };
+  const itemOf = tab => {
+    if (!tab || isSplit(tab)) return tab;
+    // A Glance or the unfinished New Split placeholder is never the session.
+    if (["zen-glance-tab", "zen-empty-tab"].some(attr => tab.hasAttribute(attr))) return tab;
+    const group = groupOf(tab);
+    return isSplit(group) ? group : tab;
+  };
+  const allItems = () => [...new Set(allTabs().map(itemOf))];
+  const workspace = item => memberTabs(item)[0]?.getAttribute("zen-workspace-id") || "";
+  const selectedPane = item => {
+    const tabs = memberTabs(item);
+    return tabs.find(tab => tab === gBrowser.selectedTab) ||
+      tabs.find(tab => tab === activePanes.get(item)) || tabs[0];
   };
   const sameScope = (a, b) => workspace(a) === workspace(b) &&
     groupOf(a) === groupOf(b) && a.pinned === b.pinned;
@@ -39,13 +60,20 @@
     node.group = groupOf(node.tab);
     node.pinned = node.tab.pinned;
   };
-  function eligible(tab) {
-    if (!tab?.isConnected || tab.closing || !gBrowser.isTab(tab) || tab.splitview ||
-        ["zen-essential", "zen-glance-tab", "zen-empty-tab", "split-view",
-          "zen-live-folder-item-id"].some(attribute => tab.hasAttribute(attribute))) return false;
+  const usableTab = tab => !!tab?.isConnected && !tab.closing && gBrowser.isTab(tab) &&
+    !tab.splitview &&
+    !["zen-essential", "zen-glance-tab", "zen-empty-tab",
+      "zen-live-folder-item-id"].some(attribute => tab.hasAttribute(attribute));
+  function eligible(input) {
+    const tab = itemOf(input);
+    if (!tab?.isConnected || tab.closing) return false;
+    if (isSplit(tab)) {
+      const panes = memberTabs(tab);
+      if (panes.length < 2 || !panes.every(pane => usableTab(pane) &&
+          pane.pinned === tab.pinned && workspace(pane) === workspace(panes[0]))) return false;
+    } else if (!usableTab(tab) || tab.hasAttribute("split-view")) return false;
     for (let group = groupOf(tab); group; group = groupOf(group)) {
-      // Ordinary tab groups can be styled as folders. Split ownership still
-      // excludes every pane, including sleeping panes without split attributes.
+      // Tree children are siblings of the split wrapper, never native panes.
       if (group.isLiveFolder || group.hasAttribute("split-view-group")) return false;
     }
     return true;
@@ -57,27 +85,33 @@
     console.error("[Tree Tabs]", error);
   };
 
-  function read(tab) {
-    try {
-      const value = JSON.parse(SessionStore.getCustomTabValue(tab, STORAGE) || "null");
-      if (value?.v === 1 && typeof value.id === "string" && value.id.length < 100) {
-        return {
-          id: value.id,
-          parentId: typeof value.parent === "string" ? value.parent : "",
-          collapsed: value.collapsed === true,
-        };
-      }
-    } catch {}
+  function read(item) {
+    for (const tab of memberTabs(item)) {
+      try {
+        const value = JSON.parse(SessionStore.getCustomTabValue(tab,
+          isSplit(item) ? SPLIT_STORAGE : STORAGE) || "null");
+        if (value?.v === 1 && typeof value.id === "string" && value.id.length < 100 &&
+            (isSplit(item) ? value.group === item.id : !value.split)) {
+          return {
+            id: value.id,
+            parentId: typeof value.parent === "string" ? value.parent : "",
+            collapsed: value.collapsed === true, persisted: true,
+          };
+        }
+      } catch {}
+    }
     return null;
   }
 
   function ensure(tab, restoring = false) {
+    tab = itemOf(tab);
     let node = nodes.get(tab);
     const saved = !node || restoring ? read(tab) : null;
     if (!node) {
       node = {
         tab, id: Services.uuid.generateUUID().toString(),
         parentId: "", collapsed: false, parent: null, children: [],
+        members: memberTabs(tab), persisted: false,
       };
       rememberScope(node);
       nodes.set(tab, node);
@@ -90,10 +124,158 @@
     if (!node.tab.isConnected || node.tab.closing) return;
     const value = JSON.stringify({
       v: 1, id: node.id, parent: node.parentId, collapsed: node.collapsed,
+      ...(isSplit(node.tab) ? { group: node.tab.id } : {}),
     });
-    if (SessionStore.getCustomTabValue(node.tab, STORAGE) !== value) {
-      SessionStore.setCustomTabValue(node.tab, STORAGE, value);
+    const key = isSplit(node.tab) ? SPLIT_STORAGE : STORAGE;
+    for (const tab of memberTabs(node.tab)) {
+      if (SessionStore.getCustomTabValue(tab, key) !== value) {
+        SessionStore.setCustomTabValue(tab, key, value);
+      }
     }
+    node.persisted = true;
+  }
+
+  function syncItems() {
+    const items = allItems();
+    const live = new Set(items);
+    const tabs = new Set(allTabs());
+    const changed = new Set();
+    const redirect = (from, to) => {
+      for (const child of nodes.values()) {
+        if (child !== to && child.parentId === from.id) {
+          child.parentId = to.id;
+          save(child);
+        }
+      }
+    };
+    const detachedPane = (tab, parentId) => {
+      const node = ensure(tab);
+      // Pane-local history must not duplicate the still-live session identity.
+      if ([...nodes.values()].some(other => other !== node && other.id === node.id)) {
+        node.id = Services.uuid.generateUUID().toString();
+      }
+      node.parentId = parentId;
+      node.collapsed = false;
+      SessionStore.deleteCustomTabValue(tab, SPLIT_STORAGE);
+      save(node);
+      changed.add(node);
+    };
+
+    for (const [item, node] of [...nodes]) {
+      if (!isSplit(item)) continue;
+      const survivors = node.members.filter(tab => tabs.has(tab));
+      if (!live.has(item)) {
+        const replacement = survivors.map(itemOf).find(eligible);
+        clearUI(item);
+        nodes.delete(item);
+        pendingMoves.delete(node);
+        if (!replacement) {
+          release(node, true);
+          continue;
+        }
+        const existing = nodes.get(replacement);
+        if (existing) {
+          redirect(node, existing);
+          changed.add(existing);
+        } else {
+          node.tab = replacement;
+          node.members = memberTabs(replacement);
+          rememberScope(node);
+          nodes.set(replacement, node);
+          if (!isSplit(replacement)) SessionStore.deleteCustomTabValue(replacement, SPLIT_STORAGE);
+          save(node);
+          changed.add(node);
+        }
+        for (const tab of survivors) {
+          if (itemOf(tab) === tab && tab !== replacement) detachedPane(tab, node.parentId);
+        }
+      } else {
+        for (const tab of survivors) {
+          if (itemOf(tab) === tab) detachedPane(tab, node.parentId);
+        }
+      }
+    }
+
+    for (const item of items) {
+      if (!isSplit(item)) continue;
+      const old = nodes.get(item);
+      const candidates = memberTabs(item).map(tab => nodes.get(tab)).filter(Boolean);
+      const node = ensure(item);
+      if (candidates.length) {
+        const owners = old || node.persisted ? [node, ...candidates] : candidates;
+        const ids = new Set(owners.map(candidate => candidate.id));
+        const byId = new Map([...nodes.values()].map(candidate => [candidate.id, candidate]));
+        const roots = owners.filter(candidate => {
+          const seen = new Set();
+          for (let parent = byId.get(candidate.parentId); parent && !seen.has(parent);
+               parent = byId.get(parent.parentId)) {
+            if (ids.has(parent.id)) return false;
+            seen.add(parent);
+          }
+          return true;
+        });
+        // Combining a parent and a deeper descendant must keep the ancestor's
+        // role even when the descendant was the first/focused split pane.
+        const lead = (old || node.persisted) && roots.includes(node) ? node :
+          roots.find(candidate => candidate.parentId || candidate.children.length || candidate.collapsed) ||
+          roots[0] || owners[0];
+        if (!old && !node.persisted) {
+          node.id = lead.id;
+        }
+        node.parentId = lead.parentId;
+        node.collapsed = lead.collapsed;
+        const seen = new Set();
+        while (ids.has(node.parentId) && !seen.has(node.parentId)) {
+          seen.add(node.parentId);
+          node.parentId = candidates.find(candidate => candidate.id === node.parentId)?.parentId || "";
+        }
+        if (seen.has(node.parentId)) node.parentId = "";
+        for (const candidate of candidates) {
+          clearUI(candidate.tab);
+          nodes.delete(candidate.tab);
+          pendingMoves.delete(candidate);
+          redirect(candidate, node);
+        }
+        save(node);
+        changed.add(node);
+      }
+      const next = memberTabs(item);
+      if (next.length !== node.members.length ||
+          next.some((tab, index) => tab !== node.members[index])) {
+        if (node.persisted) save(node);
+        changed.add(node);
+      }
+      node.members = next;
+    }
+    for (const [item, node] of nodes) {
+      if (!live.has(item)) {
+        clearUI(item);
+        nodes.delete(item);
+        pendingMoves.delete(node);
+      }
+    }
+    if (changed.size) {
+      // Retain the old scope links until native moves have carried descendants.
+      const byId = new Map([...nodes.values()].map(node => [node.id, node]));
+      for (const node of nodes.values()) { node.parent = null; node.children = []; }
+      for (const node of nodes.values()) {
+        const parent = byId.get(node.parentId);
+        const seen = new Set([node.id]);
+        let cyclic = false;
+        for (let ancestor = parent; ancestor; ancestor = byId.get(ancestor.parentId)) {
+          if (seen.has(ancestor.id)) { cyclic = true; break; }
+          seen.add(ancestor.id);
+        }
+        if (cyclic) {
+          node.parentId = "";
+          save(node);
+        } else if (parent) {
+          node.parent = parent;
+          parent.children.push(node);
+        }
+      }
+    }
+    return changed;
   }
 
   function descendants(node) {
@@ -119,7 +301,7 @@
       tab.removeAttribute(attribute);
     }
     tab.style.removeProperty("--uc-tree-depth");
-    tab.querySelector(".uc-tree-twisty")?.remove();
+    tab.querySelector(isSplit(tab) ? ":scope > .uc-tree-split-twisty" : ".uc-tree-twisty")?.remove();
   }
 
   // Unsupported native groups and split membership win over the tree.
@@ -237,16 +419,17 @@
       tab.toggleAttribute("uc-tree-hidden", hidden);
       tab.toggleAttribute("uc-tree-collapsed", node.collapsed);
       tab.style.setProperty("--uc-tree-depth", String(depth(node)));
-      let button = tab.querySelector(".uc-tree-twisty");
+      let button = tab.querySelector(isSplit(tab) ? ":scope > .uc-tree-split-twisty" : ".uc-tree-twisty");
       if (!node.children.length) {
         button?.remove();
         continue;
       }
       if (!button) {
-        const content = tab.querySelector(".tab-content");
+        const content = isSplit(tab) ? tab : tab.querySelector(".tab-content");
         if (!content) continue;
         button = document.createElementNS("http://www.w3.org/1999/xhtml", "button");
         button.className = "uc-tree-twisty";
+        if (isSplit(tab)) button.classList.add("uc-tree-split-twisty");
         button.type = "button";
         button.addEventListener("mousedown", event => {
           if (event.button === 0) {
@@ -259,7 +442,11 @@
           event.stopPropagation();
           toggleCollapse(tab);
         });
-        content.prepend(button);
+        if (isSplit(tab)) {
+          // Bypass tab-group's redirected append method. Native pane membership
+          // and its flex container must contain only the browser's own elements.
+          Node.prototype.insertBefore.call(tab, button, tab.groupContainer);
+        } else content.prepend(button);
       }
       button.textContent = node.collapsed ? "▸" : "▾";
       button.setAttribute("aria-expanded", String(!node.collapsed));
@@ -273,8 +460,9 @@
   function moveBranches(tabs, callback) {
     if (typeof callback !== "function") throw new TypeError("A synchronous move is required.");
     if (!enabled()) return callback();
+    syncItems();
     followMovedBranches();
-    const members = new Set(tabs.map(tab => nodes.get(tab)).filter(node => node && eligible(node.tab)));
+    const members = new Set(tabs.map(tab => nodes.get(itemOf(tab))).filter(node => node && eligible(node.tab)));
     const roots = [...members].filter(node => !members.has(node.parent));
     let completed = false;
     moving++;
@@ -302,8 +490,9 @@
 
   function reconcile() {
     const started = performance.now();
+    const changed = syncItems();
     followMovedBranches();
-    const tabs = allTabs();
+    const tabs = allItems();
     const live = new Set(tabs);
     for (const [tab] of nodes) {
       if (!live.has(tab)) nodes.delete(tab);
@@ -335,6 +524,7 @@
       // Missing parents may still be restoring. Keep the saved id but render
       // the child at root until that parent arrives.
       if (!parent) continue;
+      if (pendingContainers.has(tab.id) || pendingContainers.has(parent.tab.id)) continue;
       let valid = eligible(parent.tab) && sameScope(parent.tab, node.tab);
       const seen = new Set([node.id]);
       for (let ancestor = parent; valid && ancestor; ancestor = byId.get(ancestor.parentId)) {
@@ -353,6 +543,22 @@
       pendingParents.delete(tab);
       if (enabled()) nestOpenedTab(tab, parentTab, false);
     }
+    if (enabled()) for (let node of changed) {
+      if (nodes.get(node.tab) !== node || !eligible(node.tab)) continue;
+      while (node.parent) node = node.parent;
+      const branch = descendants(node);
+      let previous = node.tab;
+      const adjacent = branch.every(child => {
+        const next = previous.nextElementSibling === child.tab;
+        previous = child.tab;
+        return next;
+      });
+      if (branch.length && !adjacent) {
+        moving++;
+        try { gBrowser.moveTabsAfter(branch.map(child => child.tab), node.tab); }
+        finally { moving--; }
+      }
+    }
     revealSelected(false);
     render();
     api.reconciliations++;
@@ -368,7 +574,10 @@
   }
 
   function nest(tab, parentTab, update = true) {
+    syncItems();
     followMovedBranches();
+    tab = itemOf(tab);
+    parentTab = itemOf(parentTab);
     if (!enabled() || !eligible(tab) || !eligible(parentTab) ||
         tab === parentTab || !sameScope(tab, parentTab)) return false;
     const node = ensure(tab);
@@ -397,6 +606,8 @@
   }
 
   function nestOpenedTab(tab, parentTab, update = true) {
+    tab = itemOf(tab);
+    parentTab = itemOf(parentTab);
     if (!eligible(tab) || !eligible(parentTab) || workspace(tab) !== workspace(parentTab)) return false;
     if (!sameScope(tab, parentTab)) {
       // New ordinary tabs may be placed outside their opener's group by Zen.
@@ -416,7 +627,9 @@
   }
 
   function outdent(tab) {
+    syncItems();
     followMovedBranches();
+    tab = itemOf(tab);
     if (!enabled()) return false;
     const node = nodes.get(tab);
     const parent = node?.parent;
@@ -436,13 +649,15 @@
   }
 
   function toggleCollapse(tab) {
+    syncItems();
     followMovedBranches();
+    tab = itemOf(tab);
     if (!enabled()) return;
     const node = nodes.get(tab);
     if (!node?.children.length) return;
     const collapse = !node.collapsed;
-    if (collapse && descendants(node).some(n => n.tab === gBrowser.selectedTab)) {
-      gBrowser.selectedTab = tab;
+    if (collapse && descendants(node).some(n => n.tab === itemOf(gBrowser.selectedTab))) {
+      gBrowser.selectedTab = selectedPane(tab);
     }
     node.collapsed = collapse;
     save(node);
@@ -451,7 +666,7 @@
 
   function revealSelected(update = true) {
     if (!enabled()) return;
-    const node = nodes.get(gBrowser.selectedTab);
+    const node = nodes.get(itemOf(gBrowser.selectedTab));
     let changed = false;
     for (let parent = node?.parent; parent; parent = parent.parent) {
       if (parent.collapsed) {
@@ -478,8 +693,9 @@
     cleanups.push(() => target.removeEventListener(type, handler, options));
   }
 
-  function previousOrdinaryTab(tab) {
-    const tabs = allTabs();
+  function previousTreeItem(tab) {
+    tab = itemOf(tab);
+    const tabs = allItems();
     return tabs.slice(0, tabs.indexOf(tab)).reverse().find(previous =>
       eligible(previous) && sameScope(previous, tab));
   }
@@ -522,7 +738,7 @@
     if (!canHandleShortcut(browser)) return false;
     const tab = gBrowser.selectedTab;
     try {
-      if (action === "nest") return nest(tab, previousOrdinaryTab(tab));
+      if (action === "nest") return nest(tab, previousTreeItem(tab));
       if (action === "outdent") return outdent(tab);
     } catch (error) { report(error); }
     return false;
@@ -617,6 +833,132 @@
     });
   }
 
+  function installSplitCreation() {
+    const splitter = window.gZenViewSplitter;
+    if (typeof splitter?.splitTabs !== "function") return;
+    const original = splitter.splitTabs;
+    const descriptor = Object.getOwnPropertyDescriptor(splitter, "splitTabs");
+    const split = function (...args) {
+      if (this !== splitter || !enabled() || splitter._sessionRestoring) {
+        return original.apply(this, args);
+      }
+      const input = args[0] || [];
+      const source = itemOf(input[0]);
+      const folder = source && groupOf(source);
+      const next = source?.nextElementSibling;
+      const existing = input.some(tab => isSplit(itemOf(tab)));
+      moving++;
+      try {
+        const result = original.apply(this, args);
+        const group = result?.tabs?.length ? itemOf(result.tabs[0]) : null;
+        // Zen hoists new splits out of ordinary tab groups. Restore the native
+        // wrapper to its source slot before the empty-folder observer runs.
+        if (!existing && isSplit(group) && folder?.isConnected &&
+            !folder.isLiveFolder && !isSplit(folder) && groupOf(group) !== folder &&
+            memberTabs(group).some(tab => input.includes(tab))) {
+          folder.addTabs([group]);
+          if (next?.isConnected && next.parentElement === folder.groupContainer &&
+              next !== group) gBrowser.moveTabBefore(group, next);
+        }
+        return result;
+      } finally {
+        moving--;
+        if (!moving) {
+          try { reconcile(); } catch (error) { report(error); }
+        }
+      }
+    };
+    splitter.splitTabs = split;
+    cleanups.push(() => {
+      if (splitter.splitTabs !== split) return;
+      if (descriptor) Object.defineProperty(splitter, "splitTabs", descriptor);
+      else delete splitter.splitTabs;
+    });
+  }
+
+  function restoreSplitContainers(final = false) {
+    if (!enabled()) return;
+    for (const [id, saved] of pendingContainers) {
+      const group = document.getElementById(id);
+      const folder = document.getElementById(saved.id);
+      if (!group || !folder) {
+        if (final) pendingContainers.delete(id);
+        continue;
+      }
+      let valid = isSplit(group) && gBrowser.isTabGroup(folder) &&
+        gBrowser.tabContainer.contains(folder) && !group.contains(folder) &&
+        group.pinned === folder.pinned;
+      for (let ancestor = folder; ancestor; ancestor = groupOf(ancestor)) {
+        if (ancestor.isLiveFolder || isSplit(ancestor)) valid = false;
+      }
+      if (!valid) { pendingContainers.delete(id); continue; }
+      moving++;
+      try {
+        if (groupOf(group) !== folder) folder.addTabs([group]);
+        const following = document.getElementById(saved.before);
+        const siblings = [...folder.groupContainer.children].filter(item =>
+          item !== group && (gBrowser.isTab(item) || gBrowser.isTabGroup(item)));
+        const anchor = following?.parentElement === folder.groupContainer
+          ? following : siblings[saved.index];
+        if (anchor && anchor !== group) gBrowser.moveTabBefore(group, anchor);
+        pendingContainers.delete(id);
+      } finally {
+        moving--;
+      }
+    }
+  }
+
+  function installSplitPersistence() {
+    if (splitPersistenceInstalled) return;
+    const splitter = window.gZenViewSplitter;
+    if (typeof splitter?.storeDataForSessionStore !== "function" ||
+        typeof splitter.restoreDataFromSessionStore !== "function") return;
+    splitPersistenceInstalled = true;
+    const supported = () => enabled() &&
+      !PrivateBrowsingUtils.isWindowPrivate(window) && !window._littleZenInfo;
+    for (const method of ["storeDataForSessionStore", "restoreDataFromSessionStore"]) {
+      const original = splitter[method];
+      const descriptor = Object.getOwnPropertyDescriptor(splitter, method);
+      const wrapper = function (...args) {
+        if (this !== splitter || !supported()) return original.apply(this, args);
+        if (method === "storeDataForSessionStore") {
+          return original.apply(this, args).map(data => {
+            const group = document.getElementById(data.groupId);
+            const folder = group && groupOf(group);
+            if (!folder || isSplit(folder) || folder.isLiveFolder) return data;
+            const siblings = [...folder.groupContainer.children].filter(item =>
+              gBrowser.isTab(item) || gBrowser.isTabGroup(item));
+            const index = siblings.indexOf(group);
+            // Zen and ATG serialize ordinary groups flat. Keep only the split's
+            // own container slot alongside its native layout, without changing it.
+            return { ...data, ucTreeContainer: {
+              id: folder.id, before: siblings[index + 1]?.id || "", index,
+            } };
+          });
+        }
+        for (const data of args[0] || []) {
+          const saved = data.ucTreeContainer;
+          if (typeof saved?.id === "string" && saved.id.length < 100 &&
+              Number.isInteger(saved.index) && saved.index >= 0) {
+            pendingContainers.set(data.groupId, saved);
+          }
+        }
+        const result = original.apply(this, args);
+        try {
+          restoreSplitContainers(api.status === "ready");
+          if (api.status === "ready") reconcile();
+        } catch (error) { report(error); }
+        return result;
+      };
+      splitter[method] = wrapper;
+      cleanups.push(() => {
+        if (splitter[method] !== wrapper) return;
+        if (descriptor) Object.defineProperty(splitter, method, descriptor);
+        else delete splitter[method];
+      });
+    }
+  }
+
   function installMenu() {
     const parentMenu = document.getElementById("tabContextMenu");
     if (!parentMenu) return;
@@ -626,7 +968,7 @@
     const popup = document.createXULElement("menupopup");
     menu.append(popup);
     parentMenu.append(menu);
-    const context = () => window.TabContextMenu?.contextTab;
+    const context = () => itemOf(window.TabContextMenu?.contextTab);
     const item = (id, label, action) => {
       const element = document.createXULElement("menuitem");
       element.id = id;
@@ -638,7 +980,7 @@
       return element;
     };
     const nestItem = item("uc-tree-nest", "Nest under previous tab",
-      tab => nest(tab, previousOrdinaryTab(tab)));
+      tab => nest(tab, previousTreeItem(tab)));
     const outdentItem = item("uc-tree-outdent", "Move out one level", outdent);
     const collapseItem = item("uc-tree-collapse", "Collapse child tabs", toggleCollapse);
     item("uc-tree-expand-all", "Expand all branches in this Space", expandAll);
@@ -647,7 +989,7 @@
       const tab = context();
       const node = nodes.get(tab);
       menu.hidden = !enabled() || !eligible(tab);
-      nestItem.disabled = !previousOrdinaryTab(tab);
+      nestItem.disabled = !previousTreeItem(tab);
       outdentItem.disabled = !node?.parent;
       collapseItem.disabled = !node?.children.length;
       collapseItem.setAttribute("label", node?.collapsed ? "Expand child tabs" : "Collapse child tabs");
@@ -656,6 +998,8 @@
   }
 
   async function install() {
+    // Session restoration happens before Zen's startup promise resolves.
+    installSplitPersistence();
     if (!window.gBrowserInit?.delayedStartupFinished) {
       await new Promise(resolve => {
         let waiting = true;
@@ -679,9 +1023,11 @@
       api.status = "outside-prototype-scope";
       return;
     }
+    installSplitPersistence();
+    restoreSplitContainers(true);
     const style = document.createElementNS("http://www.w3.org/1999/xhtml", "link");
     style.rel = "stylesheet";
-    style.href = "chrome://sine/content/tree-tabs-prototype/tree-tabs.css?v=0.1.6";
+    style.href = "chrome://sine/content/tree-tabs-prototype/tree-tabs.css?v=0.3.0";
     document.documentElement.append(style);
     cleanups.push(() => style.remove());
 
@@ -694,24 +1040,30 @@
       schedule(80);
     });
     listen(window, "TabClose", event => {
-      const node = nodes.get(event.target);
-      release(node, true);
-      pendingMoves.delete(node);
-      nodes.delete(event.target);
+      const item = itemOf(event.target);
+      const node = nodes.get(item);
+      if (!isSplit(item)) {
+        release(node, true);
+        pendingMoves.delete(node);
+        nodes.delete(item);
+      }
       pendingParents.delete(event.target);
       schedule();
     });
     listen(window, "TabMove", event => {
-      const node = nodes.get(event.target);
+      const node = nodes.get(itemOf(event.target));
       if (!moving && enabled() && node) pendingMoves.add(node);
       if (!moving) schedule();
     });
     listen(window, "TabSelect", () => {
+      const item = itemOf(gBrowser.selectedTab);
+      if (isSplit(item)) activePanes.set(item, gBrowser.selectedTab);
       revealSelected();
       updateShortcutKeys();
     });
     for (const type of ["TabPinned", "TabUnpinned", "TabGrouped", "TabUngrouped",
-      "TabGroupMoved", "TabGroupCollapse", "TabGroupExpand", "SSWindowStateReady"]) {
+      "TabGroupMoved", "TabGroupCollapse", "TabGroupExpand", "SSWindowStateReady",
+      "ZenSplitViewTabsSplit", "ZenTabRemovedFromSplit", "TabGroupRemoved"]) {
       listen(window, type, () => schedule());
     }
     listen(window, "SSTabRestored", event => {
@@ -735,6 +1087,7 @@
     Services.prefs.addObserver(PREFIX, prefObserver);
     cleanups.push(() => Services.prefs.removeObserver(PREFIX, prefObserver));
     installGlancePromotion();
+    installSplitCreation();
     installKeyboardShortcuts();
     installMenu();
     reconcile();
@@ -753,22 +1106,27 @@
     nodes.clear();
     pendingParents.clear();
     pendingMoves.clear();
+    pendingContainers.clear();
     if (window.TreeTabs === api) delete window.TreeTabs;
   }
 
   const api = window.TreeTabs = {
-    version: "0.1.6", status: "starting", reconciliations: 0, lastReconcileMs: 0,
+    version: "0.3.0", status: "starting", reconciliations: 0, lastReconcileMs: 0,
     supportsFolderTrees: true,
     supportsGroupTrees: true,
+    supportsSplitTrees: true,
     nest, outdent, toggleCollapse, expandAll, destroy,
     canHandleShortcut, handleShortcut, moveBranches,
-    parentOf: tab => nodes.get(tab)?.parent?.tab || null,
-    depthOf: tab => depth(nodes.get(tab)),
+    itemOf,
+    parentOf: tab => nodes.get(itemOf(tab))?.parent?.tab || null,
+    depthOf: tab => depth(nodes.get(itemOf(tab))),
     snapshot: () => [...nodes.values()].filter(n => eligible(n.tab)).map(n => ({
       tab: n.tab.id, id: n.id, parent: n.parent?.id || "", collapsed: n.collapsed,
       depth: depth(n), hidden: n.tab.hasAttribute("uc-tree-hidden"),
       children: n.children.length, workspace: workspace(n.tab),
       folder: groupOf(n.tab)?.id || "", pinned: n.tab.pinned,
+      kind: isSplit(n.tab) ? "split" : "tab",
+      members: memberTabs(n.tab).map(tab => tab.id),
     })),
   };
   window.addUnloadListener?.(destroy);

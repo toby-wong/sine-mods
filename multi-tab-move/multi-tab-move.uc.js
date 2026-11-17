@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name           Multi Tab Move
-// @version        0.1.3
+// @version        0.2.0
 // @description    Shift-click individual tabs and move trees and split sessions together.
 // @include        chrome://browser/content/browser.xhtml
 // ==/UserScript==
@@ -160,8 +160,8 @@
     if (tree && Services.prefs.getBoolPref("uc.tree-tabs.enabled", true)) {
       if (tree.status !== "ready")
         throw new Error("Tree Tabs must finish loading before acting on this selection.");
-      if (!tree.moveBranches || !tree.supportsGroupTrees)
-        throw new Error("Update Tree Tabs Prototype to 0.1.6 or later before acting on this selection.");
+      if (!tree.moveBranches || !tree.supportsSplitTrees)
+        throw new Error("Update Tree Tabs Prototype to 0.3.0 or later before acting on this selection.");
     }
   }
 
@@ -228,7 +228,8 @@
     // Split sessions remain atomic when resolving drop anchors.
     while (groupOf(item) && !folderTarget(groupOf(item))) item = groupOf(item);
     const tree = window.TreeTabs;
-    if (isTab(item) && tree && Services.prefs.getBoolPref("uc.tree-tabs.enabled", true)) {
+    if ((isTab(item) || item?.hasAttribute("split-view-group")) &&
+        tree && Services.prefs.getBoolPref("uc.tree-tabs.enabled", true)) {
       const seen = new Set();
       while (tree.parentOf(item) && !seen.has(item)) {
         seen.add(item);
@@ -241,7 +242,7 @@
           for (let parent = tree.parentOf(candidate); parent && !parents.has(parent);
                parent = tree.parentOf(parent)) {
             parents.add(parent);
-            if (parent === root) { item = candidate; break; }
+            if (parent === root) { item = unitOf(candidate); break; }
           }
         }
       }
@@ -275,7 +276,8 @@
       if (folderTarget(item) && !header) {
         return { workspace: spaceOf(item), folder: item, row: item.labelContainerElement || item };
       }
-      const row = isTab(item) ? item : item.labelContainerElement || item;
+      const row = isTab(item) || item.hasAttribute("split-view-group")
+        ? item : item.labelContainerElement || item;
       const rect = row.getBoundingClientRect();
       const before = event.clientY < rect.y + rect.height / 2;
       const anchor = rootAnchor(item, before);
@@ -615,7 +617,7 @@
     }
     const link = document.createElementNS("http://www.w3.org/1999/xhtml", "link");
     link.rel = "stylesheet";
-    link.href = "chrome://sine/content/multi-tab-move/multi-tab-move.css?v=0.1.3";
+    link.href = "chrome://sine/content/multi-tab-move/multi-tab-move.css?v=0.2.0";
     document.documentElement.append(link);
     cleanups.push(() => link.remove());
     for (const id of ["uc-multi-tab-indicator", "uc-multi-tab-ghost"]) {
@@ -673,7 +675,7 @@
   }
 
   const api = window.MultiTabMove = {
-    version: "0.1.3", status: "starting",
+    version: "0.2.0", status: "starting",
     toggle, clear, move, moveToSpace, closeSelection, createSpaceFromSelection, destroy,
     snapshot: () => {
       const selection = plan();

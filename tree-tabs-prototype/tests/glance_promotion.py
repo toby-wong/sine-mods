@@ -244,7 +244,11 @@ def run(args):
             "return [gpIdentity(gpSplit),gpIdentity(gpPreview)];"))
         open_preview("gpSplit")
         expand()
-        check("split_origin_remains_excluded", m.js("return !TreeTabs.parentOf(gpPreview);"))
+        check("expanded_glance_becomes_child_of_split_session", m.js("""
+          return TreeTabs.parentOf(gpPreview)===gpSplit.group &&
+            !gpPreview.splitView && !gpSplit.group.tabs.includes(gpPreview) &&
+            (gpPreview.group||null)===(gpSplit.group.group||null);
+        """))
 
         open_preview()
         close_preview()

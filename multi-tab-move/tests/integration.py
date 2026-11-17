@@ -68,7 +68,8 @@ return {
   documents:f.tabs.map(t=>[t.linkedBrowser?.browsingContext?.id,
     t.linkedBrowser?.browsingContext?.currentWindowGlobal?.innerWindowId]),
   splitSame:f.a.group===f.split && f.b.group===f.split && f.c.group===f.split,
-  layout:JSON.stringify(gZenViewSplitter.storeDataForSessionStore()),
+  layout:JSON.stringify(gZenViewSplitter.storeDataForSessionStore().map(
+    ({ucTreeContainer,...native})=>native)),
   splitOrder:f.split.tabs.map(t=>f.tabs.indexOf(t)),
   splitVisible:[f.a,f.b,f.c].every(t=>t.isConnected&&!t.hasAttribute('uc-tree-hidden')&&
     getComputedStyle(t).display!=='none'),

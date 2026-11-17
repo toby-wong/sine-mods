@@ -2,16 +2,19 @@
 
 ## Current status
 
-- Version 0.1.3: Shift + left-click toggles individual sidebar
+- Version 0.2.0: Shift + left-click toggles individual sidebar
   rows, with owned selection styles and a pointer drag handler.
 - Move entire selected Tree Tabs branches, native split sessions, and selected
   folder/group headers. Reuse browser, tab, group and split layout objects.
 - Same-window ordering, folder transfers and Space moves. Space moves preserve
   pins; explicit folder/section drops can change the pin state of ordinary tabs
   and complete native split groups.
-- Integrates with Tree Tabs 0.1.6's `moveBranches` transaction.
-  Require its `supportsGroupTrees` capability before a selection action when
-  Tree Tabs is present and enabled; older controllers discard ordinary-group links.
+- Integrates with Tree Tabs 0.3.0's `moveBranches` transaction.
+  Require its `supportsSplitTrees` capability before a selection action when
+  Tree Tabs is present and enabled; older controllers cannot retain split branches.
+  A pane's selected unit is the native split wrapper, which can own tree
+  descendants. Resolve anchor ancestry and the last descendant through that
+  same canonical unit; use the visible split row for pointer destinations.
 - The middle of a native folder or ordinary group header is an inside-container
   destination, including empty or collapsed containers. Header edges reorder the
   container itself. Child row targets stay in that immediate folder/group but
@@ -34,6 +37,11 @@
   ATG-backed restart and reload preservation were checked separately; do not
   make Tree Tabs responsible for ATG's group-wrapper persistence.
 - Windows desktop input and physical mouse input remain unverified.
+- Version 0.2.0 passed 118 split-tree checks, including selected split branches,
+  nested split sessions, actual WebDriver pointer moves, sleeping children,
+  folder/Space moves and reload. The 148 existing selection checks and all
+  tree/Glance/keyword/split regressions passed. Split-tree restart passed with
+  and without ATG. See [VERIFICATION.md](VERIFICATION.md) for exact coverage.
 
 ## Constraints
 
@@ -54,8 +62,10 @@
   pointer gesture and apply moves on mouseup; Escape, leaving the window and
   window blur cancel it. Hit-test the destination instead of trusting a
   captured event's source target.
-- Do not clone/reopen URLs, ungroup or rebuild split sessions, or implement
-  split-as-tree-node support. The earlier Tree Tabs experiment hid split rows.
+- Do not clone/reopen URLs, ungroup or rebuild split sessions. Split tree
+  membership belongs to Tree Tabs; Multi Tab Move carries its existing wrapper
+  and follows that controller's parent API. The earlier experiment hid split
+  rows, so always verify rendered rows and panes alongside state assertions.
 - Selection is explicit; the focused tab is not implicitly added. Tree
   descendants and all panes of a selected split must move with their owner.
 - Native folder wrappers move intact when their header is selected. Ordinary

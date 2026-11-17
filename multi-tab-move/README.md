@@ -38,7 +38,8 @@ pages, and it does not change the native set of tabs affected by Close Tab.
   Moving a child branch away from an unselected parent detaches that branch root;
   its own descendants remain attached.
 - **Split sessions:** selecting any pane's sidebar row selects the whole session.
-  Moving uses the existing group, panes and layout, without rebuilding the split.
+  Its tree children follow too, including other splits. Moving uses the existing
+  group, panes and layout, without rebuilding the split.
 - **Native folders/groups:** selecting the header moves its existing contents
   together, including nested folders and internal trees. Selecting a parent tab
   inside a folder/group carries its branch; selecting a leaf moves only that tab.
@@ -68,7 +69,7 @@ enable `sine.allow-unsafe-js`. In Sine's custom-repository field, use:
 https://github.com/toby-wong/sine-mods/tree/main/multi-tab-move
 ```
 
-If you use Tree Tabs Prototype, update it to **0.1.6 or later** for folder/group trees:
+If you use Tree Tabs Prototype, update it to **0.3.0 or later** for split-session trees:
 
 ```text
 https://github.com/toby-wong/sine-mods/tree/main/tree-tabs-prototype
@@ -112,11 +113,6 @@ python3 multi-tab-move/tests/integration.py \
   --report /private/path/report.json --pointer-drag
 ```
 
-Version 0.1.3 passed 148 browser checks, 61 folder checks and 26 ordinary-group
-checks on macOS Zen 1.24.1b, including trusted WebDriver pointer dragging and
-native menu/dialog actions. The ordinary-group checks also passed with
-Advanced Tab Groups 3.10.0. Sleeping-child moves, real restart restoration
-with that companion, tree/Glance and split-close regressions, and all 11
-installer tests passed too. See
-[VERIFICATION.md](VERIFICATION.md) for coverage and limits. Windows desktop
-input has not been physically tested.
+See [VERIFICATION.md](VERIFICATION.md) for browser, restart and installation
+coverage. Tests use disposable macOS Zen profiles and trusted WebDriver pointer
+and keyboard input. Windows desktop input has not been physically tested.

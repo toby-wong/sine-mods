@@ -2,14 +2,16 @@
 
 ## Current status
 
-- Source baseline: **0.1.6**. Ordinary tabs support opener-based nesting,
-  collapse/expand, menu-based nesting/outdenting, and session-persisted tree state.
+- Source baseline: **0.3.0**. Tabs and whole native split sessions support
+  opener-based nesting, collapse/expand, menu/keyboard nesting and saved tree state.
+  The user explicitly requested split sessions inside folders as parent/child
+  nodes. This supersedes the earlier split exclusion, not its regression warnings.
 - Native folders, ordinary tab groups and ordinary pinned tabs can contain trees.
   A parent and child share an immediate group/folder, Space and pinned section. The physical
   container determines ownership; `tab.group` can instead report the temporary
   collapsed-pins display group.
-- Alt+Shift+Right nests the selected ordinary tab under its previous ordinary
-  tab in the same folder/section and Space; Alt+Shift+Left outdents one level.
+- Alt+Shift+Right nests the selected tab or split under its previous tree item
+  in the same folder/section and Space; Alt+Shift+Left outdents one level.
   Outdenting a root does not eject it from its folder. Descendants follow,
   preserving focus, live pages, and collapse state. A Sine checkbox controls
   `uc.tree-tabs.keyboard-shortcuts`, enabled by default.
@@ -19,28 +21,31 @@
   the relationship. Closing a parent promotes its children.
 - `moveBranches(tabs, callback)` lets Multi Tab Move perform a synchronous
   native move while keeping internal parent links and collapse state. Only
-  roots whose parent is outside the moving set detach. Splits remain excluded
-  from the tree; the caller moves their native wrappers separately.
-- Essentials, live folders, split views, Glance, private
+  roots whose parent is outside the moving set detach. Pane inputs normalize to
+  their existing split wrapper; descendants can include other split sessions.
+- Essentials, live folders, Glance, private
   windows and Little Zen windows remain outside the tree. New ordinary opener
   tabs and promoted Glances enter their source's folder before attaching; an
   explicit different folder destination is respected.
 - Existing Advanced Tab Groups containers are ordinary `tab-group` elements,
   not `zen-folder` elements. Preserve their group identity and pin state.
-  Reject split groups and Live Folders anywhere in the ancestor chain; sleeping
-  split panes may have no individual split attributes. Observe the group-level
-  `split-view-group` attribute as well as pane-level split changes.
+  Normalize split panes using physical ancestry even when sleeping panes have no
+  individual split attributes. Reject a split or Live Folder as a tree item's
+  containing folder: tree children are siblings of split wrappers, never panes.
 - ATG owns ordinary group-wrapper hierarchy/header-collapse persistence.
-  Tree Tabs owns per-tab parent links and branch collapse. Do not duplicate
+  Tree Tabs owns parent links and branch collapse. Native/ATG restoration drops
+  nested split placement, so `ucTreeContainer` on serialized native split entries
+  records that split's containing group ID and sibling slot. Do not duplicate
   ATG's `tabGroupParents` / `tabGroupCollapsedStates` window state. The restart
   suite's `--advanced-tab-groups` flag verifies both owners together; bare Zen
   restores the tab trees but does not retain nested ordinary-group wrappers
   or collapsed ordinary-group headers.
-- Expose `supportsGroupTrees` for Multi Tab Move 0.1.3. Its header and child-row
+- Expose `supportsSplitTrees` for Multi Tab Move 0.2.0, retaining the earlier
+  folder/group capability flags. Its header and child-row
   destinations must retain the immediate ordinary group rather than hoisting
   the row outside it or pinning it as if every group were a native folder.
-- A Glance promoted with **Expand to new tab** becomes a child of its ordinary
-  originating tab when automatic nesting is enabled. Capture the native parent
+- A Glance promoted with **Expand to new tab** becomes a child of its originating
+  tab or split when automatic nesting is enabled. Capture the native parent
   before promotion clears its metadata, then nest after native completion.
   Existing siblings, nested ancestry, drafts, and live documents are preserved.
 - The **0.2.0 split-session experiment was reverted after split rows disappeared**.
@@ -70,11 +75,18 @@
   21 promotion, 41 keyboard, 31 Auto Glance, 114 split-close and 11 installer
   checks. Reloading with a nonempty selection preserved group objects and
   ATG window settings as well as existing tab/document/tree/split state.
+- Version 0.3.0 passed 118 split-tree checks with ATG, including trusted tree
+  controls, pointer moves, New Split, lifecycle transfer and visible panes.
+  Real restart passed 13 checks both with and without ATG, restoring two-,
+  three- and four-pane trees and split-folder placement. Existing folder-tree
+  restoration and all tree/selection/Glance/keyword/split suites passed; see
+  [PROTOTYPES.md](PROTOTYPES.md) for counts and test setup corrections.
 
 ## Implementation constraints
 
-- Keep tree state separate from native folder/split/group membership. A tree
-  operation must not hide or rearrange excluded native split members. Native
+- Keep tree state separate from native folder/split/group membership. `itemOf`
+  resolves a pane to the actual split wrapper; the node map contains that wrapper
+  once. Tree operations must not hide/reorder native split members. Native
   folder collapse and branch collapse retain separate state.
 - Preserve live tabs, selected page, collapse state, and relative descendant order;
   move existing tabs with Zen's APIs rather than recreating or reloading them.
@@ -92,6 +104,27 @@
   perform a late attachment.
 - SessionStore relationships must survive restart. Disabling the mod restores a
   flat sidebar without closing pages; collapsing does not unload documents.
+- `uc-tree-tabs-state` retains ordinary v1 tab state. `uc-tree-tabs-split-state`
+  stores a split's shared identity/parent/collapse on every real pane, with a
+  matching group ID. Ignore the reverted 0.2.0 schema. Empty New Split leaves
+  and Glances never get a split-tree identity.
+- `syncItems` transfers the source's role on split creation and the session's
+  role to a surviving pane on dissolution. Other detached panes become peers.
+  Combining ancestors/descendants must choose the outermost role and remain
+  acyclic even when pane order is reversed. Whole-session closure promotes
+  children; membership changes must not count as deliberate whole-branch moves.
+- The `splitTabs` wrapper returns a newly hoisted split to its source folder
+  before the native empty-group observer runs. Existing groups/layouts use the
+  original method. Move actual wrappers via native APIs; never rebuild panes.
+- Install split session serialization/restoration hooks before delayed startup.
+  `ucTreeContainer` is an outer property on a copied serialized entry; never
+  modify native layout trees or tab IDs. Restore the existing wrapper only after
+  its containing folder exists; defer tree scope validation until then.
+  Advanced Tab Groups remains responsible for ordinary wrapper hierarchy.
+- Group twisties sit directly on the split wrapper, outside `groupContainer`.
+  Use the native Node insertion method because group `appendChild` redirects to
+  its pane container. Clamp indentation so the row remains visible. Clear only
+  owned attributes/buttons and restore only owned method descriptors on unload.
 - Keep controller/manifest versions and the shared installer's CSS/controller
   file list aligned. Install into the profile, never into the signed application.
 - Keyboard handling uses chrome keys and a content actor. On macOS, non-reserved
@@ -99,7 +132,7 @@
   The actor accepts only trusted, exact gestures outside editors, respects page
   cancellation, and ignores repeats. Chrome capture handles sidebar focus before
   native tab-strip arrow handling; it must skip browser/content targets.
-- The parent rechecks the selected browser and ordinary-tab eligibility before
+- The parent rechecks the selected browser and tree-item eligibility before
   acting. Match an owning window by its document: `browser.ownerGlobal` is not
   necessarily the same wrapper used by Sine's script. Register actors for
   untrusted web processes explicitly; unregister when the last owning window
@@ -123,6 +156,7 @@ python3 tree-tabs-prototype/tests/keyboard.py --profile /path/to/test-profile --
 python3 tree-tabs-prototype/tests/folders.py --profile /path/to/test-profile --report /path/to/reports/folders.json
 python3 tree-tabs-prototype/tests/folder_sleeping.py --profile /path/to/test-profile --report /path/to/reports/sleeping.json
 python3 tree-tabs-prototype/tests/group_containers.py --profile /path/to/test-profile --report /path/to/reports/groups.json
+python3 tree-tabs-prototype/tests/split_sessions.py --profile /path/to/test-profile --report /path/to/reports/splits.json
 ```
 
 All suites verify the connected profile. Also run Auto Glance integration after
@@ -144,11 +178,18 @@ to both phases when ATG is installed to also verify ordinary wrapper nesting
 and header collapse. The base fixture keeps ordinary wrappers top-level and
 expanded because bare Zen does not persist those wrapper features.
 
+Split tests additionally require `split-tree-test-profile`. Run
+`tests/split_restore.py` with `--prepare --expected ... --report ...`, quit and
+restart only that disposable process, then run without `--prepare`.
+Use `--advanced-tab-groups` for its nested ordinary containers. Compare native
+layout fields separately from `ucTreeContainer`: moving into another folder
+legitimately changes placement metadata while preserving the split layout.
+
 ## Potential future direction
 
-- Explore a split session as a single tree node, preserving its native group and
-  all visible panes. Reproduce the old missing-row regression first; isolate the
-  prototype and validate move, collapse, close, restart, and actual drag behavior.
+- Extend split-tree coverage to native undo-close/adoption across browser
+  updates. The historical 0.2.0 missing-row root cause remains unestablished;
+  preserve its explicit warning and never treat old tests alone as proof.
 - Add deliberate drag-to-reparent only after defining drop targets and testing
   nested and multi-selected branches across Spaces.
 - Define cross-window tree transfer semantics and validate Windows behavior.
