@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name           Multi Tab Move
-// @version        0.1.2
+// @version        0.1.3
 // @description    Shift-click individual tabs and move trees and split sessions together.
 // @include        chrome://browser/content/browser.xhtml
 // ==/UserScript==
@@ -47,9 +47,15 @@
     }
     return true;
   };
-  const folderTarget = folder => alive(folder) && folder.isZenFolder &&
-    outsideLiveFolder(folder) && gBrowser.tabContainer.contains(folder);
-  const targetPinned = target => target.folder ? true :
+  const folderTarget = group => {
+    if (!alive(group) || !gBrowser.isTabGroup(group) ||
+        !gBrowser.tabContainer.contains(group)) return false;
+    for (let parent = group; parent; parent = groupOf(parent)) {
+      if (parent.isLiveFolder || parent.hasAttribute("split-view-group")) return false;
+    }
+    return true;
+  };
+  const targetPinned = target => target.folder ? !!target.folder.pinned :
     target.anchor ? !!target.anchor.pinned : target.pinned;
 
   function unitOf(item) {
@@ -154,8 +160,8 @@
     if (tree && Services.prefs.getBoolPref("uc.tree-tabs.enabled", true)) {
       if (tree.status !== "ready")
         throw new Error("Tree Tabs must finish loading before acting on this selection.");
-      if (!tree.moveBranches || !tree.supportsFolderTrees)
-        throw new Error("Update Tree Tabs Prototype to 0.1.5 or later before acting on this selection.");
+      if (!tree.moveBranches || !tree.supportsGroupTrees)
+        throw new Error("Update Tree Tabs Prototype to 0.1.6 or later before acting on this selection.");
     }
   }
 
@@ -218,9 +224,9 @@
 
   function rootAnchor(item, before) {
     item = unitOf(item);
-    // A row inside a folder is a destination in that folder. Keep other
-    // native groups and split sessions atomic when resolving drop anchors.
-    while (groupOf(item) && !groupOf(item).isZenFolder) item = groupOf(item);
+    // Child rows stay inside their immediate ordinary group or folder.
+    // Split sessions remain atomic when resolving drop anchors.
+    while (groupOf(item) && !folderTarget(groupOf(item))) item = groupOf(item);
     const tree = window.TreeTabs;
     if (isTab(item) && tree && Services.prefs.getBoolPref("uc.tree-tabs.enabled", true)) {
       const seen = new Set();
@@ -609,7 +615,7 @@
     }
     const link = document.createElementNS("http://www.w3.org/1999/xhtml", "link");
     link.rel = "stylesheet";
-    link.href = "chrome://sine/content/multi-tab-move/multi-tab-move.css?v=0.1.2";
+    link.href = "chrome://sine/content/multi-tab-move/multi-tab-move.css?v=0.1.3";
     document.documentElement.append(link);
     cleanups.push(() => link.remove());
     for (const id of ["uc-multi-tab-indicator", "uc-multi-tab-ghost"]) {
@@ -667,7 +673,7 @@
   }
 
   const api = window.MultiTabMove = {
-    version: "0.1.2", status: "starting",
+    version: "0.1.3", status: "starting",
     toggle, clear, move, moveToSpace, closeSelection, createSpaceFromSelection, destroy,
     snapshot: () => {
       const selection = plan();

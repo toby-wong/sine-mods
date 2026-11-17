@@ -2,19 +2,22 @@
 
 ## Current status
 
-- Version 0.1.2: Shift + left-click toggles individual sidebar
+- Version 0.1.3: Shift + left-click toggles individual sidebar
   rows, with owned selection styles and a pointer drag handler.
 - Move entire selected Tree Tabs branches, native split sessions, and selected
   folder/group headers. Reuse browser, tab, group and split layout objects.
 - Same-window ordering, folder transfers and Space moves. Space moves preserve
   pins; explicit folder/section drops can change the pin state of ordinary tabs
   and complete native split groups.
-- Integrates with Tree Tabs 0.1.5's folder-aware `moveBranches` transaction.
-  Require its `supportsFolderTrees` capability before a selection action when
-  Tree Tabs is present and enabled; older controllers would discard folder links.
-- The middle of a folder header is an inside-folder destination, including empty
-  or collapsed folders. Header edges reorder the folder itself. Child row targets
-  stay in that immediate folder but outside any unrelated tree branch.
+- Integrates with Tree Tabs 0.1.6's `moveBranches` transaction.
+  Require its `supportsGroupTrees` capability before a selection action when
+  Tree Tabs is present and enabled; older controllers discard ordinary-group links.
+- The middle of a native folder or ordinary group header is an inside-container
+  destination, including empty or collapsed containers. Header edges reorder the
+  container itself. Child row targets stay in that immediate folder/group but
+  outside any unrelated tree branch. Read destination pin state instead of
+  treating every group as a pinned folder. Split/Live Folder ancestors are
+  never destinations.
 - The selection menu can close the entire selection or create a named Space
   containing it. Close uses native beforeunload preflight and bulk removal;
   cancelling keeps all tabs. New Spaces are created inactive, then populated
@@ -25,6 +28,11 @@
   the existing tree/Glance suites, 114 split-close checks and 11 installer tests
   also passed.
   See [VERIFICATION.md](VERIFICATION.md) for the split-shortcut test limitation.
+- Version 0.1.3 also passed 26 ordinary-group checks both without companion
+  mods and with Advanced Tab Groups 3.10.0. Header drops, child-row placement,
+  pin state, sleeping children and complete split wrappers stay intact.
+  ATG-backed restart and reload preservation were checked separately; do not
+  make Tree Tabs responsible for ATG's group-wrapper persistence.
 - Windows desktop input and physical mouse input remain unverified.
 
 ## Constraints

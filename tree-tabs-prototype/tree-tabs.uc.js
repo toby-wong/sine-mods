@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name           Tree Tabs Prototype
-// @version        0.1.5
+// @version        0.1.6
 // @description    Parent and child tabs in Zen's existing sidebar.
 // @include        chrome://browser/content/browser.xhtml
 // ==/UserScript==
@@ -43,10 +43,10 @@
     if (!tab?.isConnected || tab.closing || !gBrowser.isTab(tab) || tab.splitview ||
         ["zen-essential", "zen-glance-tab", "zen-empty-tab", "split-view",
           "zen-live-folder-item-id"].some(attribute => tab.hasAttribute(attribute))) return false;
-    const group = groupOf(tab);
-    if (group && !group.isZenFolder) return false;
-    for (let folder = group; folder; folder = groupOf(folder)) {
-      if (folder.isLiveFolder) return false;
+    for (let group = groupOf(tab); group; group = groupOf(group)) {
+      // Ordinary tab groups can be styled as folders. Split ownership still
+      // excludes every pane, including sleeping panes without split attributes.
+      if (group.isLiveFolder || group.hasAttribute("split-view-group")) return false;
     }
     return true;
   }
@@ -399,13 +399,13 @@
   function nestOpenedTab(tab, parentTab, update = true) {
     if (!eligible(tab) || !eligible(parentTab) || workspace(tab) !== workspace(parentTab)) return false;
     if (!sameScope(tab, parentTab)) {
-      // New ordinary tabs may be placed outside their opener's folder by Zen.
+      // New ordinary tabs may be placed outside their opener's group by Zen.
       // Adopt only those fresh, ungrouped tabs; respect an explicit destination.
-      const folder = groupOf(parentTab);
-      if (!folder?.isZenFolder || groupOf(tab) || tab.pinned) return false;
+      const group = groupOf(parentTab);
+      if (!group || groupOf(tab) || tab.pinned) return false;
       moving++;
       try {
-        folder.addTabs([tab]);
+        group.addTabs([tab]);
         rememberScope(ensure(tab));
         pendingMoves.delete(nodes.get(tab));
       } finally {
@@ -681,7 +681,7 @@
     }
     const style = document.createElementNS("http://www.w3.org/1999/xhtml", "link");
     style.rel = "stylesheet";
-    style.href = "chrome://sine/content/tree-tabs-prototype/tree-tabs.css?v=0.1.5";
+    style.href = "chrome://sine/content/tree-tabs-prototype/tree-tabs.css?v=0.1.6";
     document.documentElement.append(style);
     cleanups.push(() => style.remove());
 
@@ -724,7 +724,8 @@
     const observer = new MutationObserver(() => schedule());
     observer.observe(gBrowser.tabContainer, {
       subtree: true, attributes: true,
-      attributeFilter: ["zen-workspace-id", "zen-glance-tab", "split-view", "zen-essential", "pinned"],
+      attributeFilter: ["zen-workspace-id", "zen-glance-tab", "split-view",
+        "split-view-group", "zen-essential", "pinned"],
     });
     cleanups.push(() => observer.disconnect());
     const prefObserver = { observe: () => {
@@ -756,8 +757,9 @@
   }
 
   const api = window.TreeTabs = {
-    version: "0.1.5", status: "starting", reconciliations: 0, lastReconcileMs: 0,
+    version: "0.1.6", status: "starting", reconciliations: 0, lastReconcileMs: 0,
     supportsFolderTrees: true,
+    supportsGroupTrees: true,
     nest, outdent, toggleCollapse, expandAll, destroy,
     canHandleShortcut, handleShortcut, moveBranches,
     parentOf: tab => nodes.get(tab)?.parent?.tab || null,

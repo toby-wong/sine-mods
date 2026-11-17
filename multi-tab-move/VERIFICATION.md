@@ -1,5 +1,50 @@
 # Multi Tab Move validation
 
+## Version 0.1.3 — ordinary tab-group destinations
+
+Validated on November 17, 2026 with macOS Zen 1.24.1b and Tree Tabs 0.1.6:
+
+| Suite | Result |
+| --- | --- |
+| Ordinary groups, trusted menu/keyboard input and selection dragging | 26 checks passed |
+| Same ordinary-group suite with Advanced Tab Groups 3.10.0 | 26 checks passed |
+| Folder trees | 61 checks passed |
+| Sleeping children through native and selection folder/pin moves | 4 checks passed |
+| Multi Tab Move | 148 checks passed |
+| Tree Tabs core / branch moves / Glance promotion / keyboard | 26 / 17 / 21 / 41 checks passed |
+| Auto Glance | 31 checks passed |
+| Split closure | 114 checks passed |
+| Shared installer | 11 tests passed |
+| Graceful quit/restart with Advanced Tab Groups | Group/folder hierarchy, collapse, 11 tree nodes, tab order and native split layout preserved |
+| Reload with an existing group selection | Tab/group objects, documents, tree/split state, selection, preferences and companion settings preserved |
+
+Existing ordinary groups now retain tree controls, branch relationships and
+their original pin state. Header-center drops enter collapsed groups, child-row
+drops remain in their immediate group, and folder/group round trips preserve
+documents. Sleeping children remain unloaded with zero requests. Complete
+split wrappers remain native and outside the tree, including when sleeping
+panes lack individual split attributes. The compatibility guard rejects an
+older Tree Tabs controller before moving a selection.
+
+Tree Tabs saves per-tab trees; Advanced Tab Groups saves ordinary wrapper
+nesting and header collapse. An initial restart without that companion retained
+the trees but flattened/expanded ordinary wrappers. The test now explicitly
+requires ATG for that additional wrapper assertion rather than assigning its
+persistence responsibility to Tree Tabs.
+
+An initial folder-suite setup exhausted Python's default five-connection
+accept queue while loading concurrent fixture pages. Increasing only the
+local test server's queue resolved setup; no browser network preference or
+runtime mod change was needed. Physical mouse input and Windows desktop
+input remain unverified.
+
+The rendered ATG sidebar showed ordinary-group trees, native folder trees and
+both native split panes. Live activation in the running profile preserved its
+tabs, documents, focus, tree/group/split state, preferences and other mod
+controllers. The second profile stayed closed and received the update for
+its next launch, with its preferences unchanged. Both profiles' installed
+files matched source, and the temporary helpers were removed.
+
 ## Version 0.1.2 — trees inside folders
 
 Validated on November 17, 2026 with macOS Zen 1.24.1b and Tree Tabs 0.1.5:

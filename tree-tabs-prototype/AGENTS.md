@@ -2,10 +2,10 @@
 
 ## Current status
 
-- Source baseline: **0.1.5**. Ordinary tabs support opener-based nesting,
+- Source baseline: **0.1.6**. Ordinary tabs support opener-based nesting,
   collapse/expand, menu-based nesting/outdenting, and session-persisted tree state.
-- Native folders and ordinary pinned tabs can contain trees. A parent and child
-  share an immediate native folder, Space and pinned section. The physical
+- Native folders, ordinary tab groups and ordinary pinned tabs can contain trees.
+  A parent and child share an immediate group/folder, Space and pinned section. The physical
   container determines ownership; `tab.group` can instead report the temporary
   collapsed-pins display group.
 - Alt+Shift+Right nests the selected ordinary tab under its previous ordinary
@@ -21,10 +21,24 @@
   native move while keeping internal parent links and collapse state. Only
   roots whose parent is outside the moving set detach. Splits remain excluded
   from the tree; the caller moves their native wrappers separately.
-- Essentials, non-folder native groups, live folders, split views, Glance, private
+- Essentials, live folders, split views, Glance, private
   windows and Little Zen windows remain outside the tree. New ordinary opener
   tabs and promoted Glances enter their source's folder before attaching; an
   explicit different folder destination is respected.
+- Existing Advanced Tab Groups containers are ordinary `tab-group` elements,
+  not `zen-folder` elements. Preserve their group identity and pin state.
+  Reject split groups and Live Folders anywhere in the ancestor chain; sleeping
+  split panes may have no individual split attributes. Observe the group-level
+  `split-view-group` attribute as well as pane-level split changes.
+- ATG owns ordinary group-wrapper hierarchy/header-collapse persistence.
+  Tree Tabs owns per-tab parent links and branch collapse. Do not duplicate
+  ATG's `tabGroupParents` / `tabGroupCollapsedStates` window state. The restart
+  suite's `--advanced-tab-groups` flag verifies both owners together; bare Zen
+  restores the tab trees but does not retain nested ordinary-group wrappers
+  or collapsed ordinary-group headers.
+- Expose `supportsGroupTrees` for Multi Tab Move 0.1.3. Its header and child-row
+  destinations must retain the immediate ordinary group rather than hoisting
+  the row outside it or pinning it as if every group were a native folder.
 - A Glance promoted with **Expand to new tab** becomes a child of its ordinary
   originating tab when automatic nesting is enabled. Capture the native parent
   before promotion clears its metadata, then nest after native completion.
@@ -48,6 +62,14 @@
   17 branch, 21 promotion, 41 keyboard, 31 Auto Glance, 148 Multi Tab Move and
   114 split-close checks passed, as did all 11 installer tests. A rendered
   browser screenshot confirmed nested rows and two visible split panes.
+- Version 0.1.6 passed 26 ordinary-group checks both alone and with Advanced
+  Tab Groups 3.10.0, including trusted context-menu, keyboard and pointer input.
+  A real restart with ATG retained wrapper nesting/header collapse, 11 tree
+  nodes, native folders and saved split layout. The existing suites passed:
+  61 folder, four sleeping-child, 148 selection, 26 core, 17 branch,
+  21 promotion, 41 keyboard, 31 Auto Glance, 114 split-close and 11 installer
+  checks. Reloading with a nonempty selection preserved group objects and
+  ATG window settings as well as existing tab/document/tree/split state.
 
 ## Implementation constraints
 
@@ -100,6 +122,7 @@ python3 tree-tabs-prototype/tests/glance_promotion.py --profile /path/to/test-pr
 python3 tree-tabs-prototype/tests/keyboard.py --profile /path/to/test-profile --report /path/to/reports/keyboard.json
 python3 tree-tabs-prototype/tests/folders.py --profile /path/to/test-profile --report /path/to/reports/folders.json
 python3 tree-tabs-prototype/tests/folder_sleeping.py --profile /path/to/test-profile --report /path/to/reports/sleeping.json
+python3 tree-tabs-prototype/tests/group_containers.py --profile /path/to/test-profile --report /path/to/reports/groups.json
 ```
 
 All suites verify the connected profile. Also run Auto Glance integration after
@@ -116,7 +139,10 @@ two-phase `tests/folder_restore.py` verifies a real process restart: run with
 `--prepare --expected /path/to/expected.json --report /path/to/prepare.json`,
 quit/restart only that disposable browser, then run without `--prepare` and with
 a fresh report path. It checks persisted native folders, tree order/collapse,
-and native split restoration.
+ordinary-group trees and native split restoration. Add `--advanced-tab-groups`
+to both phases when ATG is installed to also verify ordinary wrapper nesting
+and header collapse. The base fixture keeps ordinary wrappers top-level and
+expanded because bare Zen does not persist those wrapper features.
 
 ## Potential future direction
 

@@ -216,10 +216,16 @@ def run(args):
         for source, label in [("gpPin", "pinned"), ("gpGroup", "grouped")]:
             open_preview(source)
             expand()
-            check(label + "_origin_remains_excluded", m.js("""
-              return !TreeTabs.parentOf(gpPreview) &&
-                !window[arguments[0]].hasAttribute("uc-tree-node");
-            """, [source]))
+            if source == "gpGroup":
+                check("grouped_origin_gets_child_in_same_group", m.js("""
+                  return TreeTabs.parentOf(gpPreview)===gpGroup &&
+                    gpPreview.group===gpGroup.group && !gpPreview.pinned;
+                """))
+            else:
+                check(label + "_origin_remains_excluded", m.js("""
+                  return !TreeTabs.parentOf(gpPreview) &&
+                    !window[arguments[0]].hasAttribute("uc-tree-node");
+                """, [source]))
 
         m.js("window.gpSplit=gBrowser.addTrustedTab(arguments[0]+ '/split',{inBackground:true});", [base])
         open_preview("gpSplit")

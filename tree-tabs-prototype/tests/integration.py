@@ -252,9 +252,11 @@ def run(args):
           gBrowser.addTabGroup([ttGroupA,ttGroupB],{label:"Existing group",insertBefore:ttGroupA});
         """)
         settle()
-        check("native_groups_excluded", m.js(
+        check("cross_group_nesting_rejected", m.js(
             "return !TreeTabs.nest(ttGroupA,ttRoot)&&!TreeTabs.nest(ttRoot,ttGroupB);"))
-        assert result["checks"]["native_groups_excluded"]
+        assert result["checks"]["cross_group_nesting_rejected"]
+        check("native_group_tabs_can_nest", m.js(
+            "return TreeTabs.nest(ttGroupB,ttGroupA)&&TreeTabs.parentOf(ttGroupB)===ttGroupA;"))
 
         current_space = m.js("return gZenWorkspaces.activeWorkspace;")
         other_space = m.async_js("""

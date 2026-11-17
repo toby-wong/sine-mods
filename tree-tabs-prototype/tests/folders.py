@@ -33,6 +33,11 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
 
+class FixtureServer(ThreadingHTTPServer):
+    # Tab batches and speculative connections can exceed TCPServer's backlog.
+    request_queue_size = 64
+
+
 class PromptMarionette(Marionette):
     def command(self, name, params=None):
         if name == "WebDriver:NewSession":
@@ -59,7 +64,7 @@ return {
 
 def run(args):
     report = {"checks": {}}
-    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    server = FixtureServer(("127.0.0.1", 0), Handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     base = f"http://127.0.0.1:{server.server_port}"
     m = PromptMarionette(args.port)
@@ -202,11 +207,11 @@ def run(args):
         original = m.js(STATE)
         report["versions"] = m.js("return {tree:TreeTabs.version,multi:MultiTabMove.version,zen:Services.appinfo.version};")
         m.js("""
-          MultiTabMove.toggle(ft.root);TreeTabs.supportsFolderTrees=false;
+          MultiTabMove.toggle(ft.root);TreeTabs.supportsGroupTrees=false;
           ft.oldTreeRejected=false;
           try {MultiTabMove.move({workspace:ft.source,anchor:ft.outside,before:true});}
-          catch(error){ft.oldTreeRejected=error.message.includes("0.1.5");}
-          finally{TreeTabs.supportsFolderTrees=true;MultiTabMove.clear();}
+          catch(error){ft.oldTreeRejected=error.message.includes("0.1.6");}
+          finally{TreeTabs.supportsGroupTrees=true;MultiTabMove.clear();}
         """)
         check("older_tree_controller_is_rejected_before_move", "ft.oldTreeRejected")
         state = preserved("old_tree_rejection_preserves_documents")

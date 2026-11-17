@@ -12,10 +12,10 @@ moving them together. The gesture is the same on macOS and Windows.
    choose a destination Space.
 4. Press Escape or click a tab normally to clear the selection.
 
-To move into a folder, drop on the **middle of its header**; a highlighted
-rectangle marks the destination. Empty and collapsed folders accept drops.
-The top/bottom edges of a folder header place the selection before/after that
-folder. Dropping beside a tab inside a folder reorders within that folder.
+To move into a folder or ordinary tab group, drop on the **middle of its header**;
+a highlighted rectangle marks the destination. Empty folders and collapsed
+folders/groups accept drops. Header edges place the selection before/after the folder/group.
+Dropping beside a tab inside a folder/group reorders within that container.
 
 The selection's right-click menu also offers:
 
@@ -41,15 +41,16 @@ pages, and it does not change the native set of tabs affected by Close Tab.
   Moving uses the existing group, panes and layout, without rebuilding the split.
 - **Native folders/groups:** selecting the header moves its existing contents
   together, including nested folders and internal trees. Selecting a parent tab
-  inside a folder carries its branch; selecting a leaf moves only that tab.
+  inside a folder/group carries its branch; selecting a leaf moves only that tab.
 - **Live pages:** tab and browser objects are reused; moves do not reopen URLs.
 
 Sidebar row drops go between existing branches/groups without becoming a child
 of the row under the pointer. Folder drops retain each moved branch and detach
 its root from any parent left behind.
 
-Space moves preserve pinned state. An explicit drop into a folder or another
-tab section pins/unpins ordinary tabs and complete native split groups as needed.
+Space moves preserve pinned state. An explicit drop into a folder, ordinary
+group or another tab section pins/unpins ordinary tabs and complete native split
+groups to match the destination. Groups retain their existing type and pin state.
 Folder wrappers cannot move into the unpinned section. Unsupported group
 conversions are rejected before anything moves.
 
@@ -67,7 +68,7 @@ enable `sine.allow-unsafe-js`. In Sine's custom-repository field, use:
 https://github.com/toby-wong/sine-mods/tree/main/multi-tab-move
 ```
 
-If you use Tree Tabs Prototype, update it to **0.1.5 or later** for folder trees:
+If you use Tree Tabs Prototype, update it to **0.1.6 or later** for folder/group trees:
 
 ```text
 https://github.com/toby-wong/sine-mods/tree/main/tree-tabs-prototype
@@ -111,9 +112,11 @@ python3 multi-tab-move/tests/integration.py \
   --report /private/path/report.json --pointer-drag
 ```
 
-Version 0.1.2 passed 148 browser checks and 61 folder checks on macOS Zen
-1.24.1b, including trusted WebDriver pointer dragging and native menu/dialog
-actions. Sleeping-child moves, real restart restoration, the tree/Glance and
-split-close regressions, and all 11 installer tests passed too. See
+Version 0.1.3 passed 148 browser checks, 61 folder checks and 26 ordinary-group
+checks on macOS Zen 1.24.1b, including trusted WebDriver pointer dragging and
+native menu/dialog actions. The ordinary-group checks also passed with
+Advanced Tab Groups 3.10.0. Sleeping-child moves, real restart restoration
+with that companion, tree/Glance and split-close regressions, and all 11
+installer tests passed too. See
 [VERIFICATION.md](VERIFICATION.md) for coverage and limits. Windows desktop
 input has not been physically tested.

@@ -1,6 +1,6 @@
 # Prototype history
 
-The active version is **0.1.5**. Split sessions use Zen's normal sidebar
+The active version is **0.1.6**. Split sessions use Zen's normal sidebar
 behavior and do not participate in the prototype's tree.
 
 The repository was created after the first two prototypes were deployed.
@@ -18,6 +18,7 @@ recorded, not the original deployment times.
 | `tree-tabs-prototype/prototype/v0.1.3` | Alt+Shift+Arrow shortcuts nest and outdent ordinary tab branches, preserving editor selection. |
 | `tree-tabs-prototype/prototype/v0.1.4` | Branch-preserving synchronous move API for Multi Tab Move; split sessions remain native. |
 | `tree-tabs-prototype/prototype/v0.1.5` | Independent trees inside native folders, preserving branches across folder, pin and Space moves. |
+| `tree-tabs-prototype/prototype/v0.1.6` | Tree controls inside ordinary tab groups, including Advanced Tab Groups; preserve group type, pin state and native split ownership. |
 
 The v0.2.0 automated tests and installation checks passed, but did not catch
 the subsequent user-visible problem. Its root cause has not been established.
@@ -147,3 +148,41 @@ The existing 25 core, 17 branch, 21 promotion, 41 keyboard, 31 Auto Glance,
 tests. The session-value format and keyboard actors are unchanged. Splits remain
 native groups, outside the tree. Pointer input was driven by WebDriver; physical
 macOS mouse input and Windows desktop behavior remain unverified.
+
+## v0.1.6 validation
+
+The affected live container was an ordinary unpinned `tab-group`, styled by
+Advanced Tab Groups, rather than a native `zen-folder`. Version 0.1.5 excluded
+that container and hid both the menu and shortcut. A disposable reproduction
+confirmed the failure before the change and exercised the restored context
+menu with trusted browser input afterward.
+
+On November 17, 2026, macOS Zen 1.24.1b passed 26 ordinary-group checks both
+without a companion mod and with Advanced Tab Groups 3.10.0. These cover
+existing groups, menu/keyboard nesting, scope boundaries, nested groups,
+independent branch collapse, native group/folder/pin/Space moves, trusted
+selection dragging, sleeping children and intact split groups. Split ownership
+is checked on ancestors even when individual pane attributes are absent.
+
+A real graceful quit/restart with Advanced Tab Groups preserved nested group
+wrappers, header collapse, all 11 participating tree nodes, tab order, native
+folders and saved split layout. Tree Tabs owns per-tab tree state; Advanced
+Tab Groups owns ordinary wrapper nesting and header collapse. Bare Zen also
+restored the tab trees but flattened/expanded the ordinary wrappers. The
+restart test makes that companion requirement explicit.
+
+The 61 folder, four sleeping-child, 148 Multi Tab Move, 26 core, 17 branch,
+21 promotion, 41 keyboard, 31 Auto Glance, 114 split-close and 11 installer
+checks passed. The local fixture server now has a larger accept queue so its
+concurrent page setup does not exceed Python's five-connection default.
+An activation check with a nonempty selection preserved native groups,
+documents, tree/split state, Advanced Tab Groups settings, preferences and
+other controllers. No persistence schema, keyboard actor or split-as-tree-node
+behavior changed. Windows desktop and physical mouse input remain unverified.
+
+The rendered ATG sidebar showed nested ordinary-group trees alongside native
+folder trees and both visible split panes. Live activation in the running
+profile preserved its tabs, documents, focus, group/tree/split state,
+preferences and companion controllers. The originally affected tab remained
+in its unpinned group and became eligible for tree controls. The second profile
+was updated while closed for its next launch; its preferences were unchanged.
