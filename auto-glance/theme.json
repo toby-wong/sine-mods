@@ -1,11 +1,11 @@
 {
   "id": "auto-glance",
   "name": "Auto Glance",
-  "description": "Open website-created tabs as Glance previews. Command-click overrides Glance with a regular background tab.",
-  "version": "0.2.3",
+  "description": "Open website-created tabs as Glance previews. Command-click on Mac or Ctrl-click on Windows/Linux opens a regular background tab.",
+  "version": "0.2.4",
   "author": "Local",
   "createdAt": "2026-10-26",
-  "updatedAt": "2026-11-03",
+  "updatedAt": "2026-11-17",
   "homepage": "https://github.com/toby-wong/sine-mods/tree/main/auto-glance",
   "fork": [
     "zen"

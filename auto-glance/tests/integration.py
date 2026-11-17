@@ -27,22 +27,29 @@ a,button,input{display:block;margin:18px 0}input{padding:8px}</style>
   <a id="editable" href="/target?editable" onclick="event.preventDefault();window.open(this.href,'_blank')">Link in an editable document</a>
   <a id="editableblank" href="/target?editableblank" target="_blank" rel="noopener noreferrer">Editable new-tab link</a>
 </div>
+<iframe id="frame" src="/frame" style="width:480px;height:150px"></iframe>
 <button id="script" onclick="window.open('/target?script','_blank')">Script-created tab</button>
 <form action="/post-target" method="post" target="_blank">
 <input name="value" value="preserve-post-body"><button id="post">Submit into new tab</button></form>
 <script>document.addEventListener('DOMContentLoaded',()=>{window.documentMarker=Math.random()})</script>
+"""
+FRAME = b"""<!doctype html><meta charset="utf-8"><title>Frame links</title>
+<a id="blank" href="/target?frame" target="_blank">New-tab link in a frame</a>
+<div contenteditable="true"><a id="editable" href="/target?frame-editable"
+onclick="event.preventDefault();window.open(this.href,'_blank')">Editable frame link</a></div>
 """
 
 
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         REQUESTS[urlsplit(self.path).path] += 1
+        page = FRAME if urlsplit(self.path).path == "/frame" else PAGE
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
-        self.send_header("Content-Length", str(len(PAGE)))
+        self.send_header("Content-Length", str(len(page)))
         self.end_headers()
-        self.wfile.write(PAGE)
+        self.wfile.write(page)
 
     def do_POST(self):
         body = self.rfile.read(int(self.headers.get("Content-Length", 0)))
@@ -84,14 +91,18 @@ def run(args):
     def chrome():
         m.command("Marionette:SetContext", {"value": "chrome"})
 
-    def click(identifier, key=None, button=0):
+    def click(identifier, key=None, button=0, frame=None):
         content()
         point = m.js("""
-          const element=document.getElementById(arguments[0]);
+          const frame=arguments[1] && document.getElementById(arguments[1]);
+          frame?.scrollIntoView({block:"center"});
+          const element=(frame?.contentDocument || document).getElementById(arguments[0]);
           element.scrollIntoView({block:"center"});
           const r=element.getBoundingClientRect();
-          return {x:Math.round(r.x+Math.min(r.width/2,80)),y:Math.round(r.y+r.height/2)};
-        """, [identifier])
+          const offset=frame?.getBoundingClientRect() || {x:0,y:0};
+          return {x:Math.round(offset.x+(frame?.clientLeft || 0)+r.x+Math.min(r.width/2,80)),
+            y:Math.round(offset.y+(frame?.clientTop || 0)+r.y+r.height/2)};
+        """, [identifier, frame])
         if key:
             m.command("WebDriver:PerformActions", {"actions": [{
                 "type": "key", "id": "modifier", "actions": [{"type": "keyDown", "value": key}],
@@ -158,7 +169,9 @@ def run(args):
         """) == "none", "Closing Glance left the parent blurred"
         return details
 
-    def background_check(name, identifier, suffix):
+    def background_check(name, identifier, suffix, frame=None):
+        if platform != "Darwin":
+            name = name.replace("cmd_", "ctrl_", 1)
         before_loads = REQUESTS["/target"]
         before = m.js("""
           return {selected:gBrowser.selectedTab.id,
@@ -168,7 +181,7 @@ def run(args):
         content()
         draft = m.js("return document.getElementById('draft')?.value;")
         chrome()
-        click(identifier, key="\ue03d")
+        click(identifier, key=accelerator, frame=frame)
         new_id = wait(
             "[...gZenWorkspaces.allStoredTabs].find(t=>!" + json.dumps(before["tabs"]) +
             ".includes(t.id) && t.linkedBrowser?.currentURI?.spec===" +
@@ -287,6 +300,9 @@ def run(args):
         actual = m.js('return Services.dirsvc.get("ProfD",Ci.nsIFile).path;')
         if Path(actual).resolve() != args.profile.resolve() or "test-profile" not in args.profile.name:
             raise RuntimeError("Integration tests require the disposable profile.")
+        platform = m.js("return Services.appinfo.OS;")
+        accelerator = "\ue03d" if platform == "Darwin" else "\ue009"
+        result["platform"] = platform
         for handle in m.command("WebDriver:GetWindowHandles"):
             m.command("WebDriver:SwitchToWindow", {"handle": handle})
             if m.js("return !window._littleZenInfo && !PrivateBrowsingUtils.isWindowPrivate(window);"):
@@ -319,7 +335,7 @@ def run(args):
         assert not no_referrer["hasOpener"]
         script = glance_check("script_created_tab", lambda: click("script"), "/target?script")
         assert script["hasOpener"], "window.open lost its opener"
-        # The explicit Command override must win even if Firefox's normal
+        # The explicit tab accelerator must win even if Firefox's normal
         # new-tab preference would select the new tab.
         old_background = m.js("""
           const old=Services.prefs.getBoolPref("browser.tabs.loadInBackground");
@@ -332,6 +348,12 @@ def run(args):
         background_check("cmd_router_link_background", "spalink", "/target?spalink")
         background_check("cmd_editable_link_background", "editable", "/target?editable")
         background_check("cmd_editable_target_blank_background", "editableblank", "/target?editableblank")
+        background_check("cmd_frame_background", "blank", "/target?frame", frame="frame")
+        background_check("cmd_editable_frame_background", "editable", "/target?frame-editable", frame="frame")
+        m.js("Services.prefs.setStringPref('zen.glance.activation-method',arguments[0]);",
+             ["meta" if platform == "Darwin" else "ctrl"])
+        background_check("cmd_glance_gesture_conflict_background", "blank", "/target?blank")
+        m.js("Services.prefs.setStringPref('zen.glance.activation-method','shift');")
         m.js("gBrowser.pinTab(gBrowser.selectedTab);return true;")
         background_check("cmd_pinned_source_background", "blank", "/target?blank")
         m.js("gBrowser.unpinTab(gBrowser.selectedTab);return true;")

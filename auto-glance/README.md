@@ -13,12 +13,14 @@ Use Glance's **expand** button for a full tab, **split** button for a split view
 or **Escape** to dismiss it. The existing Shift-click Glance and Option-click
 split gestures remain available.
 
-**Command-click always opens a regular background tab**, even when the link
-uses `target="_blank"` or a website script would normally open it in Glance.
+**Command-click on Mac or Ctrl-click on Windows/Linux opens a regular background
+tab**, even when the link uses `target="_blank"` or a website script would
+normally open it in Glance. This also overrides Zen's native Glance gesture when
+it uses the same key, including the default Ctrl-click gesture on Windows.
 The page you are reading remains selected. This also works from a Glance
 preview and for links in frames.
 
-This includes real links inside editable documents. The explicit Command
+This includes real links inside editable documents. The explicit background-tab
 gesture uses the normal browser link loader even when the document's editor
 would otherwise open its own preview.
 
@@ -35,7 +37,9 @@ preserved. Updating the mod can recover a preview already interrupted by this
 specific failure without reloading it or its parent page.
 
 Open **Zen Settings → Sine → Auto Glance → Configure** to disable the behavior or
-configure the middle-click/context-menu behavior and Command-click override.
+configure the middle-click/context-menu behavior and Command/Ctrl-click override.
+The override keeps its existing preference key so saved and synced settings
+continue to apply.
 **Extra backdrop opacity** controls the tint from **0%** (the original backdrop)
 to **100%** (opaque), with **20%** as the default. Changes apply immediately,
 including to an open preview, and the tint follows your Space colour.
@@ -60,9 +64,10 @@ Follow the collection's [installation guide](../README.md#install-the-sine-mods)
 Use the Auto Glance subfolder URL in Sine, or the shared local installer with
 `--mods auto-glance`. Restart Zen afterward.
 
-Browser testing has been on macOS. The background-tab override checks the
-Command modifier (`metaKey`); it does not currently implement Windows Ctrl-click
-as an override. On Windows, Ctrl-click can still be converted into Glance.
+The background-tab override has automated Windows, macOS, and Linux modifier
+coverage. Live browser testing has been on macOS; physical Windows/Linux input
+has not been tested. Alt-click splits and the other modified-click gestures
+retain their existing behavior.
 
 The installed mod lives under `chrome/sine-mods/auto-glance` in the Zen profile.
 The shared local installer disables automatic updates for its installed copy.
@@ -75,15 +80,22 @@ included browser tests should be rerun after significant Zen updates.
 
 ## Verification
 
-`tests/integration.py` exercises real automatic, Cmd, middle and Shift clicks;
+`node --test auto-glance/tests/background-click.test.cjs` (from the collection
+root) exercises both real click handlers with Windows, macOS, and Linux modifier
+data. It covers native Glance conflicts, both Alt-click Split View load orders,
+security checks, non-link/input/download exclusions, the setting, and reload.
+
+`tests/integration.py` exercises real automatic, Command/Ctrl, middle and Shift clicks;
 context-menu links; script-created tabs; form POSTs; opener and container
 preservation; expanding a preview; the existing Option-click split; disabling
 the mod; and unloading it without losing tabs.
 
 Regression checks include editable document links, links from an existing
-preview and split view, centering, backdrop blur, and 80% page zoom.
+preview and split view, frames, a conflicting native Glance shortcut, centering,
+backdrop blur, and 80% page zoom. It chooses the test browser's native tab modifier.
 
-`tests/contexts.py` checks private and Little Zen windows. Tests require a
+`tests/contexts.py` checks Glance and background clicks from both ordinary pages
+and previews in private and Little Zen windows. Tests require a
 separate disposable profile whose name includes `test-profile`.
 
 `tests/stale_splits.py` reproduces the closed-placeholder failure, checks

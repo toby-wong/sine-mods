@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name           Auto Glance
-// @version        0.2.3
+// @version        0.2.4
 // @description    Open link-created tabs as native Zen Glance previews.
 // @include        chrome://browser/content/browser.xhtml
 // ==/UserScript==
@@ -9,11 +9,12 @@
   "use strict";
 
   window.AutoGlance?.destroy();
-  const VERSION = "0.2.3";
+  const VERSION = "0.2.4";
   const PREFIX = "uc.auto-glance.";
+  const isMac = Services.appinfo.OS === "Darwin";
   const cleanups = [];
   let destroyed = false;
-  let commandClickDepth = 0;
+  let backgroundClickDepth = 0;
   const backgroundTabs = new WeakSet();
   const webURL = url => /^https?:\/\//i.test(url || "");
   const enabled = () => !destroyed &&
@@ -21,7 +22,7 @@
     Services.prefs.getBoolPref("zen.glance.enabled", true);
   const report = error => console.error("[Auto Glance]", error);
 
-  function installCommandClickHook() {
+  function installBackgroundClickHook() {
     const { ClickHandlerParent } = ChromeUtils.importESModule(
       "resource:///actors/ClickHandlerParent.sys.mjs"
     );
@@ -43,11 +44,13 @@
     }
     state.windows.set(window, (data, run) => {
       if (destroyed || !Services.prefs.getBoolPref(PREFIX + "cmd-click-background", true) ||
-          data.button !== 0 || !data.metaKey || data.altKey || data.ctrlKey || data.shiftKey) {
+          data.button !== 0 || data.altKey || data.shiftKey ||
+          !(isMac ? data.metaKey : data.ctrlKey) ||
+          (isMac ? data.ctrlKey : data.metaKey)) {
         return run();
       }
-      commandClickDepth++;
-      try { return run(); } finally { commandClickDepth--; }
+      backgroundClickDepth++;
+      try { return run(); } finally { backgroundClickDepth--; }
     });
     cleanups.push(() => {
       state.windows.delete(window);
@@ -72,7 +75,11 @@
         safeForUntrustedWebProcess: true,
         child: {
           esModuleURI: `chrome://sine/content/auto-glance/AutoGlanceClickChild.sys.mjs?v=${VERSION}`,
-          events: { click: { capture: true, mozSystemGroup: false } },
+          events: {
+            mousedown: { capture: true, mozSystemGroup: false },
+            keydown: { capture: true, mozSystemGroup: false },
+            click: { capture: true, mozSystemGroup: false },
+          },
         },
       });
       state.actorRegistered = true;
@@ -260,7 +267,7 @@
     // the browser-created tab, retaining opener, principals and load options.
     const originalDecision = manager.shouldOpenTabInGlance;
     const decide = function (tab, uri) {
-      if (commandClickDepth || backgroundTabs.has(tab)) return false;
+      if (backgroundClickDepth || backgroundTabs.has(tab)) return false;
       return eligible(tab, tab?.owner, uri?.spec) ||
         originalDecision.call(this, tab, uri);
     };
@@ -271,14 +278,14 @@
       }
     });
 
-    installCommandClickHook();
+    installBackgroundClickHook();
 
     // Modified clicks and "Open Link in New Tab" use the normal link loader.
     // Capture its resulting browser; do not replace its navigation or security
     // parameters with a fresh Glance load.
     const originalOpen = window.openLinkIn;
     const open = function (url, where, params, ...rest) {
-      if (commandClickDepth && ["tab", "tabshifted"].includes(where) && webURL(url)) {
+      if (backgroundClickDepth && ["tab", "tabshifted"].includes(where) && webURL(url)) {
         return originalOpen.call(this, url, where, {
           ...params,
           inBackground: true,

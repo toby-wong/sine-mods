@@ -8,7 +8,7 @@ through [Sine](https://github.com/CosmoCreeper/Sine).
 | Project | Version | What it does |
 | --- | --- | --- |
 | [Little Zen](little-zen/) | 0.1.0 | Opens a compact temporary browsing window. **Open in Space** moves the live page into a normal window, preserving its state and container. |
-| [Auto Glance](auto-glance/) | 0.2.3 | Opens website-created tabs as Glance previews, keeps Mac Command-click as a normal background tab, and adds configurable Space-coloured backdrop opacity. |
+| [Auto Glance](auto-glance/) | 0.2.4 | Opens website-created tabs as Glance previews, keeps Command/Ctrl-click as a normal background tab, and adds configurable Space-coloured backdrop opacity. |
 | [Tree Tabs Prototype](tree-tabs-prototype/) | 0.3.0 | Collapsible trees of tabs and whole split sessions, including inside folders and tab groups. Alt+Shift+Right/Left nest and outdent; branches follow folder, pin and Space moves. |
 | [Multi Tab Move](multi-tab-move/) | 0.2.0 | Shift-click rows to move branches, folders and split sessions with their tree children, create a Space, or close the selection. |
 | [Alt-click Split View — local fork](alt-click-split-view/) | 1.4.7-local | Preserves live pages when splitting, adds third/fourth panes, and supports whole-group middle-click closure with stable pane focus. Stacks new split pairs in tall windows. Based on Kostiantyn Kugot's mod. |
@@ -36,8 +36,8 @@ browser behavior has **not** been tested.
   restored after a browser restart, so keep pages you need with **Open in Space**.
 - **Auto Glance:** automatic website tabs, middle-click, and the page context
   menu's **Open Link in New Tab** can become previews. Its explicit background-tab
-  override currently checks **Command**, not Windows **Ctrl**. Windows Ctrl-click
-  may therefore become Glance; do not assume it has the Mac override.
+  override uses **Command-click on Mac** or **Ctrl-click on Windows/Linux**.
+  It also overrides Zen's own Glance modifier when it uses that same key.
   Adjust **Extra backdrop opacity** under its Sine Configure button to make the
   area behind a preview less transparent, without changing the sidebar.
 - **Tree Tabs:** tabs and whole split sessions participate, including inside

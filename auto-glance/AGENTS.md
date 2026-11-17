@@ -2,23 +2,31 @@
 
 ## Current status
 
-- Source baseline: **0.2.3**. Website-created tabs, configured middle-clicks, and
+- Source baseline: **0.2.4**. Website-created tabs, configured middle-clicks, and
   page context-menu new-tab actions can open as native Glance previews.
-- Mac Command-click is an explicit ordinary-background-tab override, including
-  routed links, editable documents, frames, and links inside an existing preview.
+- Mac Command-click and Windows/Linux Ctrl-click are explicit ordinary-background-tab
+  overrides, including routed links, editable documents, frames, and links inside
+  an existing preview. Both click layers select the modifier via `Services.appinfo.OS`.
+- The content actor also guards native `ZenGlanceChild.on_click` for that exact
+  eligible background gesture. Mousedown/keydown create the actor before native
+  Glance handles a click; capture alone is insufficient when native Glance uses
+  the same key. The native actor can otherwise open an extra foreground preview.
+  Ownership is scoped to a WindowGlobal and removed in `didDestroy`.
 - Centering/backdrop handling and recovery from abandoned temporary split records
   are implemented. This is targeted recovery, not a general split-state reset.
 - Sine's **Extra backdrop opacity** control adds a Space-coloured layer only
   behind Glance. It defaults to 20%, ranges from 0% to 100%, and applies through
   a CSS variable without reloading pages. Sidebar and preview opacity are
-  unchanged. All 31 integration checks passed on Zen 1.24b on macOS, including
+  unchanged. All 34 integration checks passed on Zen 1.24.1b on macOS, including
   the actual Sine opacity control, dynamic light/dark colours, existing click
-  gestures, blur, centering, and document preservation. Private/Little Zen and
-  interrupted-split recovery suites also passed. Glance screenshots were
-  visually inspected.
+  gestures, frames, a conflicting native Glance shortcut, blur, centering, and
+  document preservation. Six private/Little Zen checks, 15 split regressions,
+  26 Tree Tabs checks, 32 combined platform/Alt-click Node checks, and 11 installer
+  checks passed. The split-view Glance screenshot was visually inspected.
+  Interrupted-split recovery has earlier 0.2.3 coverage; its code is unchanged.
 - Normal, private, and Little Zen windows are supported by the implementation.
-  Browser validation has been on macOS; the override uses `metaKey`, so Windows
-  Ctrl-click does **not** yet get equivalent treatment.
+  Windows/macOS/Linux routing has automated handler coverage; live browser
+  validation has been on macOS. Physical Windows/Linux input remains unverified.
 - See [README.md](README.md) for eligibility rules and exclusions. Historical
   browser checks are represented by the suites below; reports are kept outside Git.
 
@@ -29,9 +37,16 @@
 - Preserve Firefox's native navigation validation, principals, referrer,
   container, POST body, and opener handling. Do not replace navigation with a
   synthetic `window.open` or direct page reload.
-- Command-click must preserve the selected source page. Automatic Glance must
+- Command/Ctrl-click must preserve the selected source page. Automatic Glance must
   continue yielding to explicit splits, separate popup windows, and different
   destination containers.
+- Retain `uc.auto-glance.cmd-click-background` as the preference key so existing
+  settings and Sine Sync keep working. Reject extra modifiers, non-primary clicks,
+  inputs, downloads, and non-HTTP(S) links in the trusted capture path.
+- The native Glance wrapper must suppress only a matching live actor's eligible
+  background gesture; keep its other gestures and mousedown positioning intact.
+  On actor destruction, remove only that actor's ownership, and restore only an
+  owned method. A later actor for the same WindowGlobal must survive old cleanup.
 - Treat connected but unloaded tabs as live tabs. Repair only the abandoned
   temporary split condition; do not reset working native split groups.
 - The CSS and actor module are loaded from within the controller, although they
@@ -43,6 +58,10 @@
 ## Validation for runtime changes
 
 From the collection root, syntax-check both JavaScript files with `node --check`.
+Run `node --test auto-glance/tests/background-click.test.cjs
+alt-click-split-view/tests/alt-click-split-view.test.cjs` for platform semantics
+and both parent-hook load orders. These execute the actual handlers against a
+native-navigation contract; they are not Windows browser/OS input tests.
 The following suites require an already running disposable Zen profile and a
 privileged localhost debugger, default port `2832`. Each accepts `--profile`,
 `--port`, and `--report`, and rejects a mismatched/non-test profile:
@@ -59,12 +78,12 @@ background visually as well as checking state/geometry.
 
 ## Potential future direction
 
-- Implement Windows Ctrl-click parity using platform-aware checks in both click
-  layers, preserving plain click, Shift-click, and Alt-click semantics.
+- Validate Ctrl-click with native desktop input on Windows and Linux, including
+  Zen's default Ctrl Glance shortcut and the shared mod installation.
 - Measure repeated open/close and hot-reload cycles for retained actors,
   listeners, or tabs before attempting performance optimizations.
 - Strengthen compatibility checks around Zen's Glance/split internals and add
   targeted regressions when upstream behavior changes.
 
-These are proposals. Do not present Windows parity or a diagnosed memory leak as
-existing behavior; update this guide alongside implementation and evidence.
+These are proposals. Do not present physical Windows validation or a diagnosed
+memory leak as established; update this guide alongside implementation and evidence.

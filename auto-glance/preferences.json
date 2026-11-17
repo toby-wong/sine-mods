@@ -19,7 +19,7 @@
   },
   {
     "property": "uc.auto-glance.cmd-click-background",
-    "label": "Command-click always opens a regular background tab",
+    "label": "Command-click (Mac) / Ctrl-click (Windows and Linux) opens a regular background tab",
     "type": "checkbox",
     "defaultValue": true
   },
@@ -47,7 +47,7 @@
   },
   {
     "type": "text",
-    "label": "Use Glance's expand button to keep a full tab, its split button for a split, or Escape to dismiss. Option-click split view keeps working.",
+    "label": "Use Glance's expand button to keep a full tab, its split button for a split, or Escape to dismiss. Option/Alt-click split view keeps working.",
     "size": "13px"
   }
 ]

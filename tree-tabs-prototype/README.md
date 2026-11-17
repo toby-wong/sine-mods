@@ -6,7 +6,7 @@ and ordinary tab groups (including groups styled by Advanced Tab Groups).
 
 ## Use
 
-- **Command-click a link in an ordinary tab:** the new background tab becomes
+- **Command-click (Mac) or Ctrl-click (Windows/Linux) a link in an ordinary tab:** the new background tab becomes
   a child of the source tab.
 - **Expand a Glance to a new tab:** with automatic nesting enabled, the promoted
   tab becomes a child of its originating ordinary tab, after existing children.
@@ -93,9 +93,9 @@ Use the Tree Tabs subfolder URL in Sine, or the shared local installer with
 
 Browser testing has been on macOS. Tree creation follows native opener
 relationships, not a specific keyboard modifier. If Auto Glance converts a link
-into a preview, that preview is excluded from the tree. Auto Glance's explicit
-background-tab override is currently Mac Command-click only; Windows Ctrl-click
-does not have that override.
+into a preview, that preview is excluded from the tree. Auto Glance **0.2.4+**
+provides the explicit background-tab override for Mac Command-click and
+Windows/Linux Ctrl-click. Physical Windows browser input remains unverified.
 
 ## Settings and undo
 
