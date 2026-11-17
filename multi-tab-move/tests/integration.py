@@ -2,6 +2,7 @@
 
 import argparse
 from collections import Counter
+from contextlib import suppress
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
@@ -17,7 +18,13 @@ COUNTS = Counter()
 PAGE = b"""<!doctype html><meta charset=utf-8><title>Multi Tab Move fixture</title>
 <style>body{font:18px system-ui;margin:30px}input{margin:20px}</style>
 <h1>Multi Tab Move fixture</h1><input id=draft value="Keep this draft">
-<script>document.documentElement.dataset.marker=crypto.randomUUID();</script>"""
+<button id=arm>Protect unsaved draft</button>
+<script>
+document.documentElement.dataset.marker=crypto.randomUUID();
+document.getElementById('arm').onclick=()=>{
+  window.onbeforeunload=e=>{e.preventDefault();e.returnValue='';};
+};
+</script>"""
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -42,6 +49,13 @@ class Server(ThreadingHTTPServer):
     daemon_threads = True
 
 
+class PromptMarionette(Marionette):
+    def command(self, name, params=None):
+        if name == "WebDriver:NewSession":
+            params["capabilities"]["alwaysMatch"]["unhandledPromptBehavior"] = "ignore"
+        return super().command(name, params)
+
+
 STATE = """
 const f=window.mt;
 return {
@@ -51,8 +65,8 @@ return {
   hidden:f.tabs.map(t=>t.hasAttribute('uc-tree-hidden')),
   selected:f.tabs.indexOf(gBrowser.selectedTab),
   spaces:f.tabs.map(t=>t.getAttribute('zen-workspace-id')),
-  documents:f.tabs.map(t=>[t.linkedBrowser.browsingContext?.id,
-    t.linkedBrowser.browsingContext?.currentWindowGlobal?.innerWindowId]),
+  documents:f.tabs.map(t=>[t.linkedBrowser?.browsingContext?.id,
+    t.linkedBrowser?.browsingContext?.currentWindowGlobal?.innerWindowId]),
   splitSame:f.a.group===f.split && f.b.group===f.split && f.c.group===f.split,
   layout:JSON.stringify(gZenViewSplitter.storeDataForSessionStore()),
   splitOrder:f.split.tabs.map(t=>f.tabs.indexOf(t)),
@@ -70,7 +84,7 @@ def run(args):
     server = Server(("127.0.0.1", 0), Handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     base = f"http://127.0.0.1:{server.server_port}"
-    m = Marionette(args.port)
+    m = PromptMarionette(args.port)
     fixture_count = 0
 
     def wait(expression, timeout=20):
@@ -180,9 +194,32 @@ def run(args):
         check(name + "_no_errors", not state["error"] and state["nativeSelection"] == 0, state["error"])
         return state
 
+    def context_action(action, row="mt.root"):
+        pointer(row + ".querySelector('.tab-label')", button=2)
+        wait("document.getElementById('uc-multi-tab-menu').state==='open'")
+        pointer("document.getElementById(" + json.dumps("uc-multi-tab-" + action) + ")")
+
+    def alert(action, text=None):
+        deadline = time.monotonic() + 8
+        while True:
+            try:
+                message = m.command("WebDriver:GetAlertText")
+                assert message, "Expected a native prompt"
+                break
+            except RuntimeError as error:
+                if "no such alert" not in str(error) or time.monotonic() >= deadline:
+                    raise
+                time.sleep(.05)
+        if text is not None:
+            m.command("WebDriver:SendAlertText", {"text": text})
+        m.command("WebDriver:DismissAlert" if action == "cancel" else "WebDriver:AcceptAlert")
+        settle()
+        return message
+
     try:
         actual = m.js('return Services.dirsvc.get("ProfD",Ci.nsIFile).path;')
         assert Path(actual).resolve() == args.profile.resolve() and "test-profile" in actual
+        main = m.command("WebDriver:GetWindowHandle")
         wait("window.TreeTabs?.status==='ready'&&window.MultiTabMove?.status==='ready'")
         m.js("Services.prefs.setBoolPref('uc.multi-tab-move.enabled',true);Services.prefs.setBoolPref('uc.tree-tabs.enabled',true);")
         m.command("WebDriver:SetWindowRect", {"width": 1400, "height": 1100})
@@ -403,12 +440,145 @@ def run(args):
         state = preserved("hot_reload", before)
         check("hot_reload_clears_selection_without_moving", not state["selection"]["explicit"] and state["order"] == before["order"])
         check("owned_ui_not_duplicated", m.js("return document.querySelectorAll('#uc-multi-tab-menu').length===1 && document.querySelectorAll('#uc-multi-tab-indicator').length===1;"))
+        before = fixture()
+        m.js("MultiTabMove.toggle(mt.root);MultiTabMove.toggle(mt.a);")
+        context_action("close")
+        wait("[mt.root,mt.child,mt.grandchild,mt.sibling,mt.a,mt.b,mt.c].every(t=>!t.isConnected)")
+        check("close_selection_closes_whole_branch_and_split", m.js("""
+          return !mt.split.isConnected &&
+            !gZenViewSplitter._data.some(g=>g.tabs.some(t=>[mt.a,mt.b,mt.c].includes(t)));
+        """))
+        check("close_selection_keeps_unselected_tabs_and_focus", m.js("""
+          return [mt.before,mt.middle,mt.after].every(t=>t.isConnected&&!t.closing) &&
+            gBrowser.selectedTab===mt.before;
+        """))
+        check("close_selection_preserves_surviving_documents", m.js(STATE)["documents"][0] == before["documents"][0])
+        check("close_selection_clears_only_closed_rows", not m.js("return MultiTabMove.snapshot().tabs.length;"))
+        check("close_selection_keeps_window", m.js("return !window.closed;"))
+
+        before = fixture()
+        m.js("MultiTabMove.toggle(mt.child);")
+        context_action("close", "mt.child")
+        wait("!mt.child.isConnected&&!mt.grandchild.isConnected")
+        check("close_child_branch_keeps_parent_and_sibling", m.js("""
+          return mt.root.isConnected&&mt.sibling.isConnected&&TreeTabs.parentOf(mt.sibling)===mt.root;
+        """))
+        check("close_child_branch_keeps_unselected_split", m.js(STATE)["layout"] == before["layout"] and
+              m.js(STATE)["splitSame"])
+
+        for action in ["cancel", "accept"]:
+            before = fixture()
+            m.js("gBrowser.selectedTab=mt.b;")
+            m.command("WebDriver:SwitchToWindow", {"handle": main})
+            m.command("Marionette:SetContext", {"value": "content"})
+            pointer("document.getElementById('arm')")
+            m.command("Marionette:SetContext", {"value": "chrome"})
+            wait("mt.b.linkedBrowser.hasBeforeUnload")
+            m.js("gBrowser.selectedTab=mt.before;MultiTabMove.toggle(mt.root);MultiTabMove.toggle(mt.a);")
+            selected_ids = m.js("return MultiTabMove.snapshot().tabs;")
+            context_action("close")
+            check("close_native_prompt_" + action, bool(alert(action)))
+            if action == "cancel":
+                state = preserved("cancel_close", before)
+                check("cancel_close_preserves_every_selected_tab", m.js("""
+                  return mt.tabs.every(t=>t.isConnected&&!t.closing);
+                """) and state["selection"]["tabs"] == selected_ids)
+            else:
+                wait("[mt.root,mt.child,mt.grandchild,mt.sibling,mt.a,mt.b,mt.c].every(t=>!t.isConnected)")
+                check("accept_close_removes_entire_selection", m.js("return !mt.split.isConnected;"))
+                check("accept_close_preserves_other_tabs", m.js("""
+                  return [mt.before,mt.middle,mt.after].every(t=>t.isConnected&&!t.closing);
+                """))
+
+        for action, name in [("cancel", None), ("accept", "   ")]:
+            before = fixture()
+            spaces = m.js("return gZenWorkspaces.getWorkspaces().map(s=>s.uuid);")
+            m.js("MultiTabMove.toggle(mt.root);MultiTabMove.toggle(mt.a);")
+            context_action("new-space")
+            check("new_space_native_prompt_" + action, bool(alert(action, name)))
+            state = preserved("new_space_" + action, before)
+            check("new_space_" + action + "_does_not_create_or_move",
+                  m.js("return gZenWorkspaces.getWorkspaces().map(s=>s.uuid);") == spaces and
+                  state["order"] == before["order"] and state["spaces"] == before["spaces"] and
+                  state["selected"] == before["selected"])
+
+        before = fixture()
+        m.js("""
+          TreeTabs.toggleCollapse(mt.root);
+          gBrowser.pinTab(mt.middle);
+          gBrowser.selectedTab=mt.b;
+          MultiTabMove.toggle(mt.root);MultiTabMove.toggle(mt.a);MultiTabMove.toggle(mt.middle);
+        """)
+        before = m.js(STATE)
+        spaces = m.js("return gZenWorkspaces.getWorkspaces().map(s=>s.uuid);")
+        context_action("new-space")
+        alert("accept", "  Selection action space  ")
+        wait("gZenWorkspaces.getActiveWorkspace().name==='Selection action space'")
+        destination_id = m.js("return gZenWorkspaces.activeWorkspace;")
+        check("new_space_created_once_with_name", destination_id not in spaces and
+              len(m.js("return gZenWorkspaces.getWorkspaces();")) == len(spaces) + 1)
+        state = preserved("new_space_moves_selection", before)
+        check("new_space_contains_whole_selection", all(state["spaces"][i] == destination_id
+              for i in [1, 2, 3, 4, 5, 6, 7, 8]))
+        check("new_space_leaves_unselected_tabs_in_source", state["spaces"][0] == source and
+              state["spaces"][9] == source)
+        check("new_space_keeps_active_split_pane_and_pin", state["selected"] == 7 and
+              m.js("return mt.middle.pinned;"))
+        check("new_space_preserves_container", m.js("""
+          return gZenWorkspaces.getActiveWorkspace().containerTabId ===
+            gZenWorkspaces.getWorkspaceFromId(arguments[0]).containerTabId;
+        """, [source]))
+
+        before = fixture()
+        spaces = m.js("return gZenWorkspaces.getWorkspaces().map(s=>s.uuid);")
+        m.js("""
+          MultiTabMove.toggle(mt.root);MultiTabMove.toggle(mt.a);
+          window.mtOriginalMove=TreeTabs.moveBranches;
+          TreeTabs.moveBranches=()=>{throw new Error('Injected create-space move failure');};
+        """)
+        context_action("new-space")
+        alert("accept", "Failed move should not leave a Space")
+        wait("MultiTabMove.lastError?.includes('Injected create-space move failure')")
+        m.js("TreeTabs.moveBranches=mtOriginalMove;delete MultiTabMove.lastError;")
+        state = preserved("failed_new_space", before)
+        check("failed_new_space_removes_only_empty_created_space",
+              m.js("return gZenWorkspaces.getWorkspaces().map(s=>s.uuid);") == spaces and
+              state["spaces"] == before["spaces"] and state["order"] == before["order"])
+
+        before = fixture()
+        m.js("""
+          MultiTabMove.toggle(mt.root);MultiTabMove.toggle(mt.a);
+          window.mtOriginalPreflight=gBrowser.runBeforeUnloadForTabs;
+          window.mtCloseGate=Promise.withResolvers();
+          gBrowser.runBeforeUnloadForTabs=()=>mtCloseGate.promise;
+          window.mtCloseResult=MultiTabMove.closeSelection();
+        """)
+        check("duplicate_close_is_ignored", m.async_js("return await MultiTabMove.closeSelection();") is False)
+        m.js("MultiTabMove.destroy();mtCloseGate.resolve(false);")
+        check("unload_during_close_aborts", m.async_js("return await mtCloseResult;") is False)
+        m.js("""
+          gBrowser.runBeforeUnloadForTabs=mtOriginalPreflight;
+          Services.scriptloader.loadSubScriptWithOptions(
+            'chrome://sine/content/multi-tab-move/multi-tab-move.uc.js',{target:window,ignoreCache:true});
+        """)
+        wait("MultiTabMove.status==='ready'")
+        state = preserved("unload_during_close", before)
+        check("unload_during_close_keeps_every_tab", m.js("return mt.tabs.every(t=>t.isConnected&&!t.closing);"))
         check("all_pages_loaded_once", all(count == 1 for path, count in COUNTS.items() if "/case-" in path and not path.endswith("favicon.ico")), dict(COUNTS))
     finally:
         args.report.parent.mkdir(parents=True, exist_ok=True)
         args.report.write_text(json.dumps(report, indent=2) + "\n")
-        m.close()
-        server.shutdown()
+        try:
+            with suppress(RuntimeError):
+                m.command("WebDriver:DismissAlert")
+            m.command("Marionette:SetContext", {"value": "chrome"})
+            m.js("""
+              if(window.mtOriginalPreflight)gBrowser.runBeforeUnloadForTabs=mtOriginalPreflight;
+              if(window.mtOriginalMove)TreeTabs.moveBranches=mtOriginalMove;
+            """)
+        finally:
+            m.close()
+            server.shutdown()
 
 
 if __name__ == "__main__":

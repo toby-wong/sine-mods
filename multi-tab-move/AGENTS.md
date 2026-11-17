@@ -2,15 +2,19 @@
 
 ## Current status
 
-- Initial 0.1.0 implementation: Shift + left-click toggles individual sidebar
+- Version 0.1.1: Shift + left-click toggles individual sidebar
   rows, with owned selection styles and a pointer drag handler.
 - Move entire selected Tree Tabs branches, native split sessions, and selected
   folder/group headers. Reuse browser, tab, group and split layout objects.
 - Same-window ordering and Space moves only. Pins retain their section.
 - Integrates with Tree Tabs 0.1.4's synchronous `moveBranches` transaction.
-- Zen 1.24.1b on macOS: 99 integration checks passed, including trusted WebDriver
-  pointer dragging, plus the affected tree/Glance/close and installer checks.
-  Live activation preserved the existing profile's session and other mods.
+- The selection menu can close the entire selection or create a named Space
+  containing it. Close uses native beforeunload preflight and bulk removal;
+  cancelling keeps all tabs. New Spaces are created inactive, then populated
+  through the existing move transaction before being activated.
+- macOS Zen 1.24.1b: 148 integration checks passed, including trusted WebDriver
+  pointer dragging and native menu/dialog actions, plus 114 split-close checks
+  and 11 installer tests. The earlier tree/Glance regressions passed for 0.1.0.
   See [VERIFICATION.md](VERIFICATION.md) for the split-shortcut test limitation.
 - Windows desktop input and physical mouse input remain unverified.
 
@@ -18,6 +22,17 @@
 
 - Never use native `multiselected` as this mod's selection state. That would also
   change Close Tab semantics and let native drag packing reorder branches.
+- Only the explicit Close selected tabs command closes this mod's selection.
+  Use `runBeforeUnloadForTabs` before `removeTabs` with `skipPermitUnload`,
+  native menu metrics and `closeWindowWithLastTab: false`. Never bypass the
+  preflight or turn ordinary close controls into selection-wide close actions.
+- After prompts or asynchronous preparation, recheck the owning instance,
+  selection, source Space and Tree Tabs readiness. A disabled/unloaded instance
+  or a changed selection must not complete a delayed close/move. Ignore duplicate
+  close/create commands while an action is pending.
+- Name cancellation/blank names must not create a Space. Keep the source
+  container and existing tab/browser identities. A failed move may delete only
+  its own unused, empty Space; never remove a Space that acquired tabs/folders.
 - Cancel native `dragstart` only for this mod's selected rows. Track the trusted
   pointer gesture and apply moves on mouseup; Escape, leaving the window and
   window blur cancel it. Hit-test the destination instead of trusting a
@@ -51,6 +66,9 @@
   actual drag gestures, mixed tree/split ordering, collapsed descendants,
   multi-pane splits, Space moves, repeated moves, cancellation, hot reload,
   rollback, unchanged document IDs/drafts/request counts and visible split rows.
+- Exercise real context-menu commands and native naming/beforeunload dialogs,
+  cancellation/acceptance, unrelated tabs, failed Space creation cleanup,
+  active split focus, and unload while awaiting close permission.
 - Report separately whether a drop was synthesized or driven by real pointer
   input. Passing DOM tests alone does not prove drag interaction works.
 

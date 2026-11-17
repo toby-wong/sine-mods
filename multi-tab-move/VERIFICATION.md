@@ -1,4 +1,41 @@
-# Multi Tab Move 0.1.0 validation
+# Multi Tab Move validation
+
+## Version 0.1.1 — selection menu actions
+
+Validated on November 17, 2026 with macOS Zen 1.24.1b:
+
+| Suite | Result |
+| --- | --- |
+| Multi Tab Move, including pointer dragging and native menu/dialog actions | 148 checks passed |
+| Split closure | 114 checks passed |
+| Shared installer | 11 tests passed |
+
+Close selected tabs was exercised through the context menu with selected trees
+and a complete split. Unrelated tabs, surviving document identities and focus
+were retained. Cancelling a real native beforeunload prompt kept the entire
+selection open; accepting closed all selected branches/panes. Closing a child
+branch preserved its parent and sibling. Duplicate commands and unloading while
+waiting for permission did not close additional tabs.
+
+New Space with selected tabs was exercised through the context menu and native
+name prompt. Cancelling or supplying whitespace created no Space and moved
+nothing. A named Space received the selected collapsed tree, split and pinned
+tab with their original documents, layout, tree links, pin state, container and
+active split pane. Unselected tabs stayed in their original Space. A simulated
+move failure removed only its newly created, empty Space.
+
+The existing move, rollback, sleeping-tab, cancellation and reload checks passed
+again. Page request counts remained one per fixture page. Windows desktop and
+physical mouse input remain unverified.
+
+Only Multi Tab Move was updated in the two existing profiles. Live activation
+preserved the running profile's tabs, documents, tree/split state, focus, move
+selection, preferences and other controllers, including the existing Tree Tabs
+instance. The closed profile was updated on disk for its next launch. A separate
+activation check also retained a nonempty selection in the disposable profile.
+Installed files matched source, and temporary activation helpers were removed.
+
+## Version 0.1.0 — initial prototype
 
 Validated on November 17, 2026 with Zen 1.24.1b on macOS, Tree Tabs 0.1.4,
 Auto Glance 0.2.3 and Alt-click Split View 1.4.7-local. Browser tests used a

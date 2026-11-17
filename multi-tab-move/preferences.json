@@ -8,7 +8,7 @@
   },
   {
     "type": "text",
-    "label": "Shift + left-click toggles a row. Drag a selected row to move the selection. A parent carries its children; a split session moves as one row. Dashed outlines show children moving with their parent. Right-click a selection to move it to a Space. Escape or a plain click clears the selection. Tree Tabs requires version 0.1.4 or later.",
+    "label": "Shift + left-click toggles a row. Drag a selected row to move the selection. A parent carries its children; a split session moves as one row. Dashed outlines show children moving with their parent. Right-click a selection to move it to a Space, create a new Space, or close all selected tabs. Escape or a plain click clears the selection. Tree Tabs requires version 0.1.4 or later.",
     "size": "13px"
   }
 ]

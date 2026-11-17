@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name           Multi Tab Move
-// @version        0.1.0
+// @version        0.1.1
 // @description    Shift-click individual tabs and move trees and split sessions together.
 // @include        chrome://browser/content/browser.xhtml
 // ==/UserScript==
@@ -24,6 +24,7 @@
   let drag = null;
   let pressed = null;
   let suppressClick = null;
+  let pendingAction = false;
   let menu, indicator, ghost;
 
   const active = () => !destroyed && Services.prefs.getBoolPref(PREF, true);
@@ -132,6 +133,25 @@
 
   function selected(item) {
     return plan().units.some(unit => unit === item || unit.contains(item));
+  }
+
+  function requireTreeReady() {
+    const tree = window.TreeTabs;
+    if (tree && Services.prefs.getBoolPref("uc.tree-tabs.enabled", true)) {
+      if (tree.status !== "ready")
+        throw new Error("Tree Tabs must finish loading before acting on this selection.");
+      if (!tree.moveBranches)
+        throw new Error("Update Tree Tabs Prototype to 0.1.4 or later before acting on this selection.");
+    }
+  }
+
+  function sameSelection(selection) {
+    if (!active()) return false;
+    const current = plan();
+    return ["chosen", "units", "tabs"].every(key =>
+      current[key].length === selection[key].length &&
+      current[key].every((item, index) => item === selection[key][index])) &&
+      current.units.every(item => spaceOf(item) === selection.space);
   }
 
   function onMouseDown(event) {
@@ -314,12 +334,7 @@
     if (!active() || !validDrop(selection, target)) return false;
     const { units, tabs } = selection;
     const tree = window.TreeTabs;
-    if (tree && Services.prefs.getBoolPref("uc.tree-tabs.enabled", true)) {
-      if (tree.status !== "ready")
-        throw new Error("Tree Tabs must finish loading before moving this selection.");
-      if (!tree.moveBranches)
-        throw new Error("Update Tree Tabs Prototype to 0.1.4 or later before moving this selection.");
-    }
+    requireTreeReady();
     const original = units.map(item => ({
       item, parent: item.parentNode, next: item.nextSibling,
     }));
@@ -391,6 +406,83 @@
     return true;
   }
 
+  async function closeSelection() {
+    if (!active() || pendingAction) return false;
+    requireTreeReady();
+    const selection = plan();
+    const tabs = selection.tabs.filter(tab => !tab.matches(excluded));
+    if (!tabs.length) return false;
+    selection.space = spaceOf(selection.units[0]);
+    pendingAction = true;
+    finishDrag();
+    try {
+      // Preflight the entire set so cancellation cannot leave a partial
+      // branch or split behind. Native removal still records Undo Close.
+      if (await gBrowser.runBeforeUnloadForTabs(tabs) || !sameSelection(selection))
+        return false;
+      requireTreeReady();
+      gBrowser.removeTabs(tabs, {
+        animate: true,
+        skipPermitUnload: true,
+        closeWindowWithLastTab: false,
+        metricsContext: gBrowser.TabMetrics.userTriggeredContext(
+          gBrowser.TabMetrics.METRIC_SOURCE.TAB_MENU),
+      });
+      return tabs.every(tab => !alive(tab));
+    } finally {
+      pendingAction = false;
+      if (!destroyed) render();
+    }
+  }
+
+  async function createSpaceFromSelection() {
+    if (!active() || pendingAction || !gZenWorkspaces.workspaceEnabled) return false;
+    requireTreeReady();
+    const selection = plan();
+    if (!selection.tabs.length) return false;
+    selection.space = spaceOf(selection.units[0]);
+    pendingAction = true;
+    finishDrag();
+    let created, committed = false;
+    try {
+      const name = { value: "" };
+      if (!Services.prompt.prompt(window, "New Space",
+          "Name the new Space for the selected tabs:", name, null, {}) ||
+          !name.value.trim() || !sameSelection(selection)) return false;
+      const source = gZenWorkspaces.getWorkspaceFromId(selection.space);
+      // Creating an inactive Space avoids switching focus or moving unrelated
+      // tabs before the existing move transaction can run.
+      created = await gZenWorkspaces.createAndSaveWorkspace(
+        name.value.trim(), undefined, true, source?.containerTabId || 0,
+        { insertAfterId: selection.space });
+      if (!created || !sameSelection(selection)) return false;
+      const focused = gBrowser.selectedTab;
+      committed = move({ workspace: created.uuid });
+      if (!committed) return false;
+      gZenWorkspaces.lastSelectedWorkspaceTabs[created.uuid] =
+        selection.tabs.includes(focused) ? focused :
+          selection.tabs.find(tab => !tab.matches(excluded));
+      await gZenWorkspaces.changeWorkspaceWithID(created.uuid);
+      if (!destroyed) render();
+      return true;
+    } finally {
+      try {
+        // Remove only our unused Space after a failed/cancelled move. A Space
+        // that acquired tabs or folders belongs to the user and must remain.
+        const element = !destroyed && created &&
+          gZenWorkspaces.workspaceElement(created.uuid);
+        if (!destroyed && !committed && element &&
+            !storedTabs().some(tab => spaceOf(tab) === created.uuid &&
+              !tab.hasAttribute("zen-empty-tab")) &&
+            !element.querySelector("tab-group, zen-folder, tab-split-view-wrapper")) {
+          await gZenWorkspaces.removeWorkspace(created.uuid);
+        }
+      } finally {
+        pendingAction = false;
+      }
+    }
+  }
+
   function report(error) {
     api.lastError = String(error);
     console.error("[Multi Tab Move]", error);
@@ -418,6 +510,12 @@
     heading.setAttribute("label", `Move ${plan().tabs.filter(tab => !tab.matches(excluded)).length} tabs to Space`);
     heading.setAttribute("disabled", "true");
     menu.append(heading, document.createXULElement("menuseparator"));
+    const create = document.createXULElement("menuitem");
+    create.id = "uc-multi-tab-new-space";
+    create.setAttribute("label", "New Space with selected tabs…");
+    create.disabled = pendingAction || !gZenWorkspaces.workspaceEnabled;
+    create.addEventListener("command", () => createSpaceFromSelection().catch(report));
+    menu.append(create, document.createXULElement("menuseparator"));
     for (const space of gZenWorkspaces.getWorkspaces()) {
       const entry = document.createXULElement("menuitem");
       entry.setAttribute("label", space.name);
@@ -427,6 +525,13 @@
       menu.append(entry);
     }
     menu.append(document.createXULElement("menuseparator"));
+    const close = document.createXULElement("menuitem");
+    close.id = "uc-multi-tab-close";
+    close.setAttribute("label",
+      `Close selected tabs (${plan().tabs.filter(tab => !tab.matches(excluded)).length})`);
+    close.disabled = pendingAction;
+    close.addEventListener("command", () => closeSelection().catch(report));
+    menu.append(close);
     const reset = document.createXULElement("menuitem");
     reset.setAttribute("label", "Clear tab selection");
     reset.addEventListener("command", clear);
@@ -448,7 +553,7 @@
     }
     const link = document.createElementNS("http://www.w3.org/1999/xhtml", "link");
     link.rel = "stylesheet";
-    link.href = "chrome://sine/content/multi-tab-move/multi-tab-move.css?v=0.1.0";
+    link.href = "chrome://sine/content/multi-tab-move/multi-tab-move.css?v=0.1.1";
     document.documentElement.append(link);
     cleanups.push(() => link.remove());
     for (const id of ["uc-multi-tab-indicator", "uc-multi-tab-ghost"]) {
@@ -506,8 +611,8 @@
   }
 
   const api = window.MultiTabMove = {
-    version: "0.1.0", status: "starting",
-    toggle, clear, move, moveToSpace, destroy,
+    version: "0.1.1", status: "starting",
+    toggle, clear, move, moveToSpace, closeSelection, createSpaceFromSelection, destroy,
     snapshot: () => {
       const selection = plan();
       return {

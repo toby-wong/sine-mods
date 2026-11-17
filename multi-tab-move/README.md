@@ -12,6 +12,16 @@ moving them together. The gesture is the same on macOS and Windows.
    choose a destination Space.
 4. Press Escape or click a tab normally to clear the selection.
 
+The selection's right-click menu also offers:
+
+- **New Space with selected tabs…** asks for a name, then creates the Space and
+  moves the whole selection into it. Cancelling or submitting a blank name
+  leaves the tabs and Spaces unchanged.
+- **Close selected tabs (N)** closes the selection, including carried tree
+  descendants and all panes of selected splits. The count includes those tabs.
+  Native unsaved-page prompts run before any tab closes; cancelling keeps the
+  selection intact. The browser window stays open.
+
 Solid outlines mark selected rows. Dashed outlines mark descendants that will
 move with their parent. Selection itself does not switch tabs or load sleeping
 pages, and it does not change the native set of tabs affected by Close Tab.
@@ -90,6 +100,7 @@ python3 multi-tab-move/tests/integration.py \
   --report /private/path/report.json --pointer-drag
 ```
 
-The initial version passed 99 browser checks on macOS Zen 1.24.1b, including
-trusted WebDriver pointer dragging. See [VERIFICATION.md](VERIFICATION.md) for
-coverage and limits. Windows desktop input has not been physically tested.
+Version 0.1.1 passed 148 browser checks on macOS Zen 1.24.1b, including trusted
+WebDriver pointer dragging and native menu/dialog actions, plus 114 split-close
+checks and 11 installer tests. See [VERIFICATION.md](VERIFICATION.md) for coverage
+and limits. Windows desktop input has not been physically tested.

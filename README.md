@@ -10,7 +10,7 @@ through [Sine](https://github.com/CosmoCreeper/Sine).
 | [Little Zen](little-zen/) | 0.1.0 | Opens a compact temporary browsing window. **Open in Space** moves the live page into a normal window, preserving its state and container. |
 | [Auto Glance](auto-glance/) | 0.2.3 | Opens website-created tabs as Glance previews, keeps Mac Command-click as a normal background tab, and adds configurable Space-coloured backdrop opacity. |
 | [Tree Tabs Prototype](tree-tabs-prototype/) | 0.1.4 | Adds collapsible parent/child relationships to ordinary tabs. Alt+Shift+Right/Left nest and outdent whole branches; expanded Glances nest beneath their originating tree tab. |
-| [Multi Tab Move](multi-tab-move/) | 0.1.0 | Shift-click individual rows, then drag the selection or move it to a Space while retaining tree branches and native split sessions. |
+| [Multi Tab Move](multi-tab-move/) | 0.1.1 | Shift-click individual rows to move them together, create a Space, or close the selection with tree branches and native split sessions intact. |
 | [Alt-click Split View — local fork](alt-click-split-view/) | 1.4.7-local | Preserves live pages when splitting, adds third/fourth panes, and supports whole-group middle-click closure with stable pane focus. Stacks new split pairs in tall windows. Based on Kostiantyn Kugot's mod. |
 | [Keyword Tab Search](keyword-tab-search/) | 0.1.2 | Activates an existing search keyword with Tab, including `keyword` for a saved `@keyword` alias, and keeps searches in a pending split pane. |
 | [Find Bar Pane Fix](findbar-pane-fix/) | 0.1.4 | Keeps Cmd/Ctrl+F inside its pane, with configurable styling and optional scaling with page zoom. |
@@ -56,6 +56,8 @@ browser behavior has **not** been tested.
   platforms. Drag a selected row to move the selection, or right-click it to
   choose a destination Space. Parents carry their descendants and split
   sessions stay together. Escape cancels a drag or clears the selection.
+  The selection menu also creates a named Space or closes all selected tabs,
+  keeping native unsaved-page prompts.
   When Tree Tabs is installed, update it to **0.1.4 or later**.
 - **Keyword Tab Search:** type an existing search keyword, press **Tab**, type
   your query, and press **Enter**. The same plain Tab gesture works on both
