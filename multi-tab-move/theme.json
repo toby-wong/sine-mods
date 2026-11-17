@@ -2,7 +2,7 @@
   "id": "multi-tab-move",
   "name": "Multi Tab Move",
   "description": "Shift-click tabs to move them together, create a Space, or close the selection with tree branches and split sessions intact.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "author": "Toby Wong",
   "createdAt": "2026-11-17",
   "updatedAt": "2026-11-17",

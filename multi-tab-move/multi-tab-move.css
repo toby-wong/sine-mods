@@ -36,6 +36,14 @@
   pointer-events: none;
 }
 
+#uc-multi-tab-indicator[uc-multi-tab-into-folder] {
+  border-radius: var(--tab-border-radius, 8px);
+  outline: 2px solid var(--zen-primary-color, AccentColor);
+  outline-offset: -2px;
+  box-shadow: none;
+  background: color-mix(in srgb, var(--zen-primary-color, AccentColor) 20%, transparent);
+}
+
 :is(#uc-multi-tab-indicator, #uc-multi-tab-ghost)[hidden] {
   display: none !important;
 }

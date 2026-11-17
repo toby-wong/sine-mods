@@ -1,5 +1,40 @@
 # Multi Tab Move validation
 
+## Version 0.1.2 — trees inside folders
+
+Validated on November 17, 2026 with macOS Zen 1.24.1b and Tree Tabs 0.1.5:
+
+| Suite | Result |
+| --- | --- |
+| Folder trees, including trusted pointer/keyboard input and selection actions | 61 checks passed |
+| Sleeping children through native and selection folder/pin moves | 4 checks passed |
+| Multi Tab Move, including pointer dragging and native menu/dialog actions | 148 checks passed |
+| Tree Tabs core / branch moves / Glance promotion / keyboard | 25 / 17 / 21 / 41 checks passed |
+| Auto Glance | 31 checks passed |
+| Split closure | 114 checks passed |
+| Shared installer | 11 tests passed |
+| Real graceful quit/restart | Folder hierarchy, tree state/order/collapse and saved split layout preserved |
+
+The folder suite checks branches inside native and nested folders, folder and
+branch collapse, scope-bound keyboard nesting, complete branch moves, pin/unpin
+transitions, and moving whole folder wrappers between Spaces. Header-center
+drops enter empty/collapsed folders; edge drops go before/after them. Row drops
+inside a folder stay outside unrelated branches. Cycles, native folder-depth
+violations and an older Tree Tabs controller are rejected before moving.
+
+Mixed folder moves keep the existing split group, pane order, saved layout,
+documents and visible panes. A failed move restores pin state and placement.
+Cmd-click children and expanded Glances attach inside their source folder.
+Selection-based new-Space and close actions preserve unrelated tabs and focus.
+Sleeping children remain unloaded and make no page requests. A rendered
+browser screenshot showed nested tree rows and both restored split panes.
+
+Tests used a disposable profile with localhost automation. Pointer gestures
+were trusted WebDriver input, not a physical mouse. Windows desktop input
+remains unverified. Keep the fixture profile's Space list small when repeating
+the suites: accumulated temporary Spaces can put an icon underneath Zen's
+new-Space button and invalidate a pointer target.
+
 ## Version 0.1.1 — selection menu actions
 
 Validated on November 17, 2026 with macOS Zen 1.24.1b:

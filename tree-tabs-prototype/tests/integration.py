@@ -242,9 +242,9 @@ def run(args):
           gBrowser.pinTab(ttPin);
         """)
         settle()
-        check("pinning_promotes_children", m.js(
-            "return TreeTabs.parentOf(ttPinChild)===null&&!ttPin.hasAttribute('uc-tree-node');"))
-        assert result["checks"]["pinning_promotes_children"]
+        check("pinning_preserves_branch", m.js(
+            "return TreeTabs.parentOf(ttPinChild)===ttPin&&ttPin.pinned&&ttPinChild.pinned;"))
+        assert result["checks"]["pinning_preserves_branch"]
 
         m.js("""
           window.ttGroupA=gBrowser.addTrustedTab("about:blank",{inBackground:true});

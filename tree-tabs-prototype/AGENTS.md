@@ -2,21 +2,29 @@
 
 ## Current status
 
-- Source baseline: **0.1.4**. Ordinary tabs support opener-based nesting,
+- Source baseline: **0.1.5**. Ordinary tabs support opener-based nesting,
   collapse/expand, menu-based nesting/outdenting, and session-persisted tree state.
+- Native folders and ordinary pinned tabs can contain trees. A parent and child
+  share an immediate native folder, Space and pinned section. The physical
+  container determines ownership; `tab.group` can instead report the temporary
+  collapsed-pins display group.
 - Alt+Shift+Right nests the selected ordinary tab under its previous ordinary
-  tab in the same Space; Alt+Shift+Left outdents one level. Descendants follow,
+  tab in the same folder/section and Space; Alt+Shift+Left outdents one level.
+  Outdenting a root does not eject it from its folder. Descendants follow,
   preserving focus, live pages, and collapse state. A Sine checkbox controls
   `uc.tree-tabs.keyboard-shortcuts`, enabled by default.
-- Moving a parent carries its entire branch in sidebar order and across Spaces.
+- Moving a parent carries its entire branch in sidebar order and across folders,
+  pinned sections and Spaces. Moving a native folder keeps its internal trees.
   Nested branch moves detach the moved root; parent/child multi-selection retains
   the relationship. Closing a parent promotes its children.
 - `moveBranches(tabs, callback)` lets Multi Tab Move perform a synchronous
   native move while keeping internal parent links and collapse state. Only
   roots whose parent is outside the moving set detach. Splits remain excluded
   from the tree; the caller moves their native wrappers separately.
-- Pinned tabs, Essentials, native groups, split views, Glance, private windows,
-  and Little Zen windows are deliberately outside the current tree.
+- Essentials, non-folder native groups, live folders, split views, Glance, private
+  windows and Little Zen windows remain outside the tree. New ordinary opener
+  tabs and promoted Glances enter their source's folder before attaching; an
+  explicit different folder destination is respected.
 - A Glance promoted with **Expand to new tab** becomes a child of its ordinary
   originating tab when automatic nesting is enabled. Capture the native parent
   before promotion clears its metadata, then nest after native completion.
@@ -34,17 +42,24 @@
   tests. Multi Tab Move's own pointer gestures and visible native split panes
   were checked. See its [validation record](../multi-tab-move/VERIFICATION.md)
   for the independent split-shortcut timeout and physical-input limitations.
+- Version 0.1.5 passed 61 folder checks, four sleeping-child checks and a real
+  restart comparison of native folder hierarchy, tree state/order/collapse and
+  saved split layout on disposable macOS Zen 1.24.1b. The existing 25 core,
+  17 branch, 21 promotion, 41 keyboard, 31 Auto Glance, 148 Multi Tab Move and
+  114 split-close checks passed, as did all 11 installer tests. A rendered
+  browser screenshot confirmed nested rows and two visible split panes.
 
 ## Implementation constraints
 
-- Keep tree state separate from native split/group membership. A tree operation
-  must not hide or rearrange excluded native split members.
+- Keep tree state separate from native folder/split/group membership. A tree
+  operation must not hide or rearrange excluded native split members. Native
+  folder collapse and branch collapse retain separate state.
 - Preserve live tabs, selected page, collapse state, and relative descendant order;
   move existing tabs with Zen's APIs rather than recreating or reloading them.
 - `followMovedBranches()` handles batched `TabMove` events and delayed workspace
   attribute changes. Preserve that ordering and multi-selection handling.
 - `moveBranches` must suppress intermediate move events, update the moved
-  nodes' Space baselines, then reconcile once. The callback must be synchronous;
+  nodes' folder, pin and Space baselines, then reconcile once. The callback must be synchronous;
   a throwing callback must restore native placement before propagating its
   error, so failed transactions preserve saved tree relationships.
 - Native opener information drives automatic nesting. New-tab commands,
@@ -83,6 +98,8 @@ python3 tree-tabs-prototype/tests/integration.py --profile /path/to/test-profile
 python3 tree-tabs-prototype/tests/branch_moves.py --profile /path/to/test-profile --report /path/to/reports/branches.json
 python3 tree-tabs-prototype/tests/glance_promotion.py --profile /path/to/test-profile --report /path/to/reports/promotion.json
 python3 tree-tabs-prototype/tests/keyboard.py --profile /path/to/test-profile --report /path/to/reports/keyboard.json
+python3 tree-tabs-prototype/tests/folders.py --profile /path/to/test-profile --report /path/to/reports/folders.json
+python3 tree-tabs-prototype/tests/folder_sleeping.py --profile /path/to/test-profile --report /path/to/reports/sleeping.json
 ```
 
 All suites verify the connected profile. Also run Auto Glance integration after
@@ -93,6 +110,13 @@ visible split rows manually before claiming that interaction is validated.
 The keyboard suite covers both content-targeted input and input routed through
 browser chrome. Create untrusted test events in the served page's own realm:
 events constructed by the privileged test sandbox can be trusted by Gecko.
+
+Folder tests require the additional `folder-tree-test-profile` marker. The
+two-phase `tests/folder_restore.py` verifies a real process restart: run with
+`--prepare --expected /path/to/expected.json --report /path/to/prepare.json`,
+quit/restart only that disposable browser, then run without `--prepare` and with
+a fresh report path. It checks persisted native folders, tree order/collapse,
+and native split restoration.
 
 ## Potential future direction
 

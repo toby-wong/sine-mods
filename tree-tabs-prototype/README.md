@@ -1,7 +1,7 @@
 # Tree Tabs Prototype
 
 A local Sine mod that adds parent and child relationships to ordinary tabs in
-Zen's existing sidebar.
+Zen's existing sidebar, including pinned tabs and native folders.
 
 ## Use
 
@@ -16,13 +16,16 @@ Zen's existing sidebar.
 - **Right-click a tab → Tree tabs:** nest it under the previous ordinary tab,
   move it out one level, or expand the current Space's branches.
 - **Alt+Shift+Right:** nest the selected tab under the previous ordinary tab in
-  its Space. **Alt+Shift+Left:** move it out one level. On macOS use **Option**
+  its folder and Space. **Alt+Shift+Left:** move it out one level. A root stays
+  inside its folder. On macOS use **Option**
   for Alt. Its children follow, and the selected page stays focused.
   These shortcuts work from the sidebar and web pages, including frames.
   Inputs, textareas, and editable content retain their text-selection shortcuts.
 - **Close a parent:** its children remain open and move up a level.
-- **Move a parent in the sidebar or to another Space:** its whole branch follows,
-  including collapsed children and grandchildren, in the same order.
+- **Move a parent in the sidebar, into/out of a folder, or to another Space:**
+  its whole branch follows, including collapsed children and grandchildren.
+  Creating a folder from a parent also carries its branch. Pinning or unpinning
+  a parent carries its descendants into the same section.
 - **New tabs, bookmarks, and external links:** remain roots unless they have
   an actual in-page opener.
 
@@ -32,15 +35,25 @@ a restart.
 
 ## Prototype scope
 
-Only ordinary, ungrouped tabs participate. Pinned tabs, Essentials, native tab
-groups, split views, and Glance previews remain outside the tree. Private and
-Little Zen windows are also outside this prototype.
+Ordinary tabs, ordinary pinned tabs, and tabs inside native Zen folders
+participate. Each immediate folder has independent trees; parent and child must
+share the same folder, Space and pinned section. Subfolders can have their own
+trees, and moving a folder preserves all trees inside it.
+
+Folder collapse and individual branch collapse are independent. Expanding a
+folder retains the branch collapse state. Both survive a browser restart.
+Links opened from a tab in a folder and Glances expanded from it enter that
+folder before attaching to their parent. Explicit destinations in another
+folder are respected.
+
+Essentials, other native tab groups, split views, live folders and Glance previews
+remain outside the tree. Private and Little Zen windows are also excluded.
 
 The existing Auto Glance and Option-click split behavior remains available.
 A Glance preview stays outside the tree while it is a preview. Expanding it
 to a normal tab can attach it to its ordinary source tab. Using Glance's
 **Split** button preserves native split membership and does not attach a tree
-child. Pinned, grouped, and split source tabs remain excluded.
+child. Split and other unsupported grouped source tabs remain excluded.
 
 Dragging/reordering a nested parent detaches that branch from its former
 parent and carries its descendants with it. Selecting both a parent and a child
@@ -97,9 +110,10 @@ checks session restoration. The existing Auto Glance regression suite is also
 run with Tree Tabs enabled.
 
 The separate [Multi Tab Move](../multi-tab-move/) mod adds Shift-click selection
-and dragging of multiple branches and native split sessions. Tree Tabs 0.1.4
-provides its synchronous `moveBranches(tabs, callback)` integration; splits still
-do not become nodes in this tree.
+and dragging of multiple branches and native split sessions. Update both mods
+for folder support: Tree Tabs **0.1.5** and Multi Tab Move **0.1.2**.
+The synchronous `moveBranches(tabs, callback)` integration retains internal tree
+relationships while folders, branches and splits move. Splits remain native.
 
 `tests/branch_moves.py` checks branch order, nested and collapsed branches,
 multi-tab moves, Space menu moves, late workspace attribute changes, page and
@@ -118,6 +132,22 @@ It accepts the same `--profile`, `--port`, and `--report` arguments.
 
 `tests/integration.py` refuses to operate unless the browser's active profile
 matches the supplied disposable `test-profile` path.
+
+`tests/folders.py` covers native folder creation, nested folders, branch
+transfers, independent collapse, trusted keyboard and pointer gestures,
+pin/unpin transitions, split preservation, rollback, Cmd-click, Glance promotion,
+selection actions and hot reload. It additionally requires a
+`folder-tree-test-profile` marker in the disposable profile.
+
+`tests/folder_restore.py --prepare` saves a fixture and expected state before
+quitting the disposable browser. Run it without `--prepare` after restarting the
+same profile to check native folder hierarchy, tree relationships, collapse,
+order and split restoration. Both runs take `--profile`, `--port`, `--expected`
+and `--report`. This changes startup restoration only in the guarded test profile.
+
+`tests/folder_sleeping.py` checks that native and multi-selection folder/pin
+moves keep a sleeping child unloaded, attached to its parent, and unfocused.
+The local fixture server must receive no requests for that child.
 
 Bonsai's native tree-tabs implementation informed the scope and edge cases.
 This prototype is implemented for the installed Zen APIs and the local Sine

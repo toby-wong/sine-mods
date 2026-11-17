@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name           Multi Tab Move
-// @version        0.1.1
+// @version        0.1.2
 // @description    Shift-click individual tabs and move trees and split sessions together.
 // @include        chrome://browser/content/browser.xhtml
 // ==/UserScript==
@@ -37,6 +37,20 @@
   const order = (a, b) => a === b ? 0 :
     a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
   const stop = event => { event.preventDefault(); event.stopImmediatePropagation(); };
+  const groupOf = item => {
+    const group = item?.parentElement?.parentElement;
+    return group && gBrowser.isTabGroup(group) ? group : null;
+  };
+  const outsideLiveFolder = item => {
+    for (let folder = item; folder; folder = groupOf(folder)) {
+      if (folder.isLiveFolder) return false;
+    }
+    return true;
+  };
+  const folderTarget = folder => alive(folder) && folder.isZenFolder &&
+    outsideLiveFolder(folder) && gBrowser.tabContainer.contains(folder);
+  const targetPinned = target => target.folder ? true :
+    target.anchor ? !!target.anchor.pinned : target.pinned;
 
   function unitOf(item) {
     if (!item) return null;
@@ -47,7 +61,7 @@
   }
 
   function eligible(item) {
-    return alive(item) && !!unitOf(item) && !item.matches(excluded) &&
+    return alive(item) && !!unitOf(item) && !item.matches(excluded) && outsideLiveFolder(item) &&
       tabsOf(item).some(tab => !tab.matches(excluded)) &&
       !tabsOf(item).some(tab => tab.hasAttribute("zen-essential") ||
         tab.hasAttribute("zen-live-folder-item-id"));
@@ -140,8 +154,8 @@
     if (tree && Services.prefs.getBoolPref("uc.tree-tabs.enabled", true)) {
       if (tree.status !== "ready")
         throw new Error("Tree Tabs must finish loading before acting on this selection.");
-      if (!tree.moveBranches)
-        throw new Error("Update Tree Tabs Prototype to 0.1.4 or later before acting on this selection.");
+      if (!tree.moveBranches || !tree.supportsFolderTrees)
+        throw new Error("Update Tree Tabs Prototype to 0.1.5 or later before acting on this selection.");
     }
   }
 
@@ -204,7 +218,9 @@
 
   function rootAnchor(item, before) {
     item = unitOf(item);
-    while (item?.group) item = item.group;
+    // A row inside a folder is a destination in that folder. Keep other
+    // native groups and split sessions atomic when resolving drop anchors.
+    while (groupOf(item) && !groupOf(item).isZenFolder) item = groupOf(item);
     const tree = window.TreeTabs;
     if (isTab(item) && tree && Services.prefs.getBoolPref("uc.tree-tabs.enabled", true)) {
       const seen = new Set();
@@ -235,8 +251,24 @@
     if (icon && gZenWorkspaces.workspaceIcons?.contains(icon)) {
       return { workspace: icon.getAttribute("zen-workspace-id"), icon };
     }
+    if (target.closest(controls)) return null;
+    const header = target.closest(".tab-group-label-container");
+    const folder = header?.parentElement;
+    if (folderTarget(folder)) {
+      const rect = header.getBoundingClientRect();
+      const fraction = (event.clientY - rect.y) / rect.height;
+      // Middle of the header means "inside"; its edges reorder the folder.
+      // Empty and collapsed folders are valid destinations too.
+      if (fraction >= .25 && fraction <= .75) {
+        return { workspace: spaceOf(folder), folder, row: header };
+      }
+      return { workspace: spaceOf(folder), anchor: folder, before: fraction < .5, row: header };
+    }
     const item = eventUnit(event);
     if (item) {
+      if (folderTarget(item) && !header) {
+        return { workspace: spaceOf(item), folder: item, row: item.labelContainerElement || item };
+      }
       const row = isTab(item) ? item : item.labelContainerElement || item;
       const rect = row.getBoundingClientRect();
       const before = event.clientY < rect.y + rect.height / 2;
@@ -257,12 +289,21 @@
   function validDrop(selection, target) {
     if (!selection.units.length || !target?.workspace ||
         !gZenWorkspaces.workspaceElement(target.workspace)) return false;
-    if (target.anchor && (!alive(target.anchor) ||
+    if (target.folder && (!folderTarget(target.folder) ||
+        spaceOf(target.folder) !== target.workspace ||
+        selection.units.some(item => item === target.folder || item.contains(target.folder)))) return false;
+    if (target.anchor && (!alive(target.anchor) || !outsideLiveFolder(target.anchor) ||
         selection.units.some(item => item === target.anchor || item.contains(target.anchor))))
       return false;
-    if (!target.icon && (target.anchor || target.section)) {
-      const pinned = target.anchor ? !!target.anchor.pinned : target.pinned;
-      if (selection.units.some(item => !!item.pinned !== pinned)) return false;
+    const nativeTarget = target.folder?.tabs[0] || target.anchor;
+    if (nativeTarget && selection.units.some(item =>
+        !gZenFolders.canDropElement(item, nativeTarget))) return false;
+    const pinned = targetPinned(target);
+    if (typeof pinned === "boolean") {
+      // Native pinning can keep a split group intact. Other group wrappers
+      // cannot change section without dissolving, so reject that conversion.
+      if (selection.units.some(item => !!item.pinned !== pinned &&
+          !(isTab(item) && !item.splitview) && !item.hasAttribute("split-view-group"))) return false;
     }
     return true;
   }
@@ -286,6 +327,7 @@
   }
 
   function showIndicator(target) {
+    indicator.toggleAttribute("uc-multi-tab-into-folder", !!target.folder);
     if (target.icon) {
       const rect = target.icon.getBoundingClientRect();
       indicator.style.cssText = `left:${rect.left}px;top:${rect.bottom - 2}px;width:${rect.width}px`;
@@ -293,7 +335,9 @@
       const row = target.row || target.section;
       const rect = row.getBoundingClientRect();
       indicator.style.cssText = `left:${rect.left + 4}px;top:${
-        target.before ? rect.top : rect.bottom - 2}px;width:${Math.max(0, rect.width - 8)}px`;
+        target.folder ? rect.top + 2 : target.before ? rect.top : rect.bottom - 2}px;` +
+        `width:${Math.max(0, rect.width - 8)}px;` +
+        (target.folder ? `height:${Math.max(0, rect.height - 4)}px` : "");
     }
     indicator.removeAttribute("hidden");
   }
@@ -338,6 +382,7 @@
     const original = units.map(item => ({
       item, parent: item.parentNode, next: item.nextSibling,
     }));
+    const pinnedStates = new Map(tabs.map(tab => [tab, tab.pinned]));
     const spaceAttributes = new Map();
     for (const item of units) {
       for (const node of [item, ...tabsOf(item),
@@ -348,10 +393,18 @@
     const apply = () => {
       try {
         const workspace = gZenWorkspaces.workspaceElement(target.workspace);
-        const changedSpace = units.some(item => spaceOf(item) !== target.workspace);
-        if (changedSpace || !target.anchor) {
+        const pinned = targetPinned(target);
+        if (typeof pinned === "boolean") {
+          for (const tab of tabs) {
+            if (tab.pinned !== pinned) gBrowser[pinned ? "pinTab" : "unpinTab"](tab);
+          }
+        }
+        const changedSpace = units.some(item => spaceOf(item) !== target.workspace ||
+          item.closest("zen-workspace")?.id !== target.workspace);
+        if (target.folder || changedSpace || !target.anchor) {
           for (const item of units) {
-            const container = item.pinned ? workspace.pinnedTabsContainer : workspace.tabsContainer;
+            const container = target.folder?.groupContainer ||
+              (item.pinned ? workspace.pinnedTabsContainer : workspace.tabsContainer);
             gBrowser.zenHandleTabMove(item, () => {
               for (const node of [item, ...tabsOf(item),
                 ...item.querySelectorAll("tab-group, zen-folder")]) {
@@ -362,7 +415,7 @@
             });
           }
         }
-        if (target.anchor) {
+        if (target.anchor && !target.folder) {
           const method = target.before ? "moveTabsBefore" : "moveTabsAfter";
           gBrowser[method](units, target.anchor);
         }
@@ -371,6 +424,9 @@
       } catch (error) {
         // The wrappers and browsers themselves are the rollback data.
         // Never recreate a tab or rebuild a split from its URL.
+        for (const [tab, pinned] of pinnedStates) {
+          if (alive(tab) && tab.pinned !== pinned) gBrowser[pinned ? "pinTab" : "unpinTab"](tab);
+        }
         for (const { item, parent, next } of original.reverse()) {
           if (alive(item) && parent.isConnected) {
             gBrowser.zenHandleTabMove(item, () =>
@@ -553,7 +609,7 @@
     }
     const link = document.createElementNS("http://www.w3.org/1999/xhtml", "link");
     link.rel = "stylesheet";
-    link.href = "chrome://sine/content/multi-tab-move/multi-tab-move.css?v=0.1.1";
+    link.href = "chrome://sine/content/multi-tab-move/multi-tab-move.css?v=0.1.2";
     document.documentElement.append(link);
     cleanups.push(() => link.remove());
     for (const id of ["uc-multi-tab-indicator", "uc-multi-tab-ghost"]) {
@@ -611,7 +667,7 @@
   }
 
   const api = window.MultiTabMove = {
-    version: "0.1.1", status: "starting",
+    version: "0.1.2", status: "starting",
     toggle, clear, move, moveToSpace, closeSelection, createSpaceFromSelection, destroy,
     snapshot: () => {
       const selection = plan();

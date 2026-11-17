@@ -2,19 +2,28 @@
 
 ## Current status
 
-- Version 0.1.1: Shift + left-click toggles individual sidebar
+- Version 0.1.2: Shift + left-click toggles individual sidebar
   rows, with owned selection styles and a pointer drag handler.
 - Move entire selected Tree Tabs branches, native split sessions, and selected
   folder/group headers. Reuse browser, tab, group and split layout objects.
-- Same-window ordering and Space moves only. Pins retain their section.
-- Integrates with Tree Tabs 0.1.4's synchronous `moveBranches` transaction.
+- Same-window ordering, folder transfers and Space moves. Space moves preserve
+  pins; explicit folder/section drops can change the pin state of ordinary tabs
+  and complete native split groups.
+- Integrates with Tree Tabs 0.1.5's folder-aware `moveBranches` transaction.
+  Require its `supportsFolderTrees` capability before a selection action when
+  Tree Tabs is present and enabled; older controllers would discard folder links.
+- The middle of a folder header is an inside-folder destination, including empty
+  or collapsed folders. Header edges reorder the folder itself. Child row targets
+  stay in that immediate folder but outside any unrelated tree branch.
 - The selection menu can close the entire selection or create a named Space
   containing it. Close uses native beforeunload preflight and bulk removal;
   cancelling keeps all tabs. New Spaces are created inactive, then populated
   through the existing move transaction before being activated.
-- macOS Zen 1.24.1b: 148 integration checks passed, including trusted WebDriver
-  pointer dragging and native menu/dialog actions, plus 114 split-close checks
-  and 11 installer tests. The earlier tree/Glance regressions passed for 0.1.0.
+- macOS Zen 1.24.1b: 148 integration checks and 61 folder checks passed,
+  including trusted WebDriver pointer dragging and native menu/dialog actions.
+  Four sleeping-child checks, a real folder/tree/split restart comparison,
+  the existing tree/Glance suites, 114 split-close checks and 11 installer tests
+  also passed.
   See [VERIFICATION.md](VERIFICATION.md) for the split-shortcut test limitation.
 - Windows desktop input and physical mouse input remain unverified.
 
@@ -42,8 +51,12 @@
 - Selection is explicit; the focused tab is not implicitly added. Tree
   descendants and all panes of a selected split must move with their owner.
 - Native folder wrappers move intact when their header is selected. Ordinary
-  child tabs can move independently; never insert a selection into an unrelated
+  child branches can move independently; never insert a selection into an unrelated
   tree branch as a side effect of dropping next to one of its children.
+- Never allow a folder to move into itself/its descendants or a Live Folder,
+  or bypass Zen's native folder-depth limit.
+  Restore native pin state as well as DOM position and Space attributes during
+  rollback. Do not convert a non-split group wrapper between pinned sections.
 - Use native move APIs. Preserve live browser identities, collapsed state,
   order within the selection, native group identity, split layout and pane focus.
 - Keep Space changes synchronous inside the tree transaction. A later Space

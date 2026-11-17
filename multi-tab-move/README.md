@@ -12,6 +12,11 @@ moving them together. The gesture is the same on macOS and Windows.
    choose a destination Space.
 4. Press Escape or click a tab normally to clear the selection.
 
+To move into a folder, drop on the **middle of its header**; a highlighted
+rectangle marks the destination. Empty and collapsed folders accept drops.
+The top/bottom edges of a folder header place the selection before/after that
+folder. Dropping beside a tab inside a folder reorders within that folder.
+
 The selection's right-click menu also offers:
 
 - **New Space with selected tabs…** asks for a name, then creates the Space and
@@ -35,12 +40,18 @@ pages, and it does not change the native set of tabs affected by Close Tab.
 - **Split sessions:** selecting any pane's sidebar row selects the whole session.
   Moving uses the existing group, panes and layout, without rebuilding the split.
 - **Native folders/groups:** selecting the header moves its existing contents
-  together. Selecting an individual ordinary tab inside a folder moves that tab.
+  together, including nested folders and internal trees. Selecting a parent tab
+  inside a folder carries its branch; selecting a leaf moves only that tab.
 - **Live pages:** tab and browser objects are reused; moves do not reopen URLs.
 
-Sidebar drops go between existing branches/groups rather than reparenting them.
-Pinned tabs keep their pinned state. A selection mixing pinned and ordinary tabs
-can move to another Space; reorder one section at a time within a Space.
+Sidebar row drops go between existing branches/groups without becoming a child
+of the row under the pointer. Folder drops retain each moved branch and detach
+its root from any parent left behind.
+
+Space moves preserve pinned state. An explicit drop into a folder or another
+tab section pins/unpins ordinary tabs and complete native split groups as needed.
+Folder wrappers cannot move into the unpinned section. Unsupported group
+conversions are rejected before anything moves.
 
 This prototype moves within one window and between its Spaces. Cross-window or
 cross-profile transfers, Essentials, Glance preview rows, live-folder items,
@@ -56,7 +67,7 @@ enable `sine.allow-unsafe-js`. In Sine's custom-repository field, use:
 https://github.com/toby-wong/sine-mods/tree/main/multi-tab-move
 ```
 
-If you use Tree Tabs Prototype, update it to **0.1.4 or later** as well:
+If you use Tree Tabs Prototype, update it to **0.1.5 or later** for folder trees:
 
 ```text
 https://github.com/toby-wong/sine-mods/tree/main/tree-tabs-prototype
@@ -100,7 +111,9 @@ python3 multi-tab-move/tests/integration.py \
   --report /private/path/report.json --pointer-drag
 ```
 
-Version 0.1.1 passed 148 browser checks on macOS Zen 1.24.1b, including trusted
-WebDriver pointer dragging and native menu/dialog actions, plus 114 split-close
-checks and 11 installer tests. See [VERIFICATION.md](VERIFICATION.md) for coverage
-and limits. Windows desktop input has not been physically tested.
+Version 0.1.2 passed 148 browser checks and 61 folder checks on macOS Zen
+1.24.1b, including trusted WebDriver pointer dragging and native menu/dialog
+actions. Sleeping-child moves, real restart restoration, the tree/Glance and
+split-close regressions, and all 11 installer tests passed too. See
+[VERIFICATION.md](VERIFICATION.md) for coverage and limits. Windows desktop
+input has not been physically tested.

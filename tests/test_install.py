@@ -84,7 +84,7 @@ class InstallTests(unittest.TestCase):
         result = self.run_install(["multi-tab-move"])
         registry = json.loads(self.registry.read_text())
         self.assertEqual(result["mods"], ["multi-tab-move", "tree-tabs-prototype"])
-        self.assertEqual(registry["tree-tabs-prototype"]["version"], "0.1.4")
+        self.assertEqual(registry["tree-tabs-prototype"]["version"], "0.1.5")
         self.assertFalse(registry["tree-tabs-prototype"]["enabled"])
         self.assertEqual((self.backup / "mods/tree-tabs-prototype/old.js").read_text(), "old tree")
 

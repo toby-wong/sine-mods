@@ -1,6 +1,6 @@
 # Prototype history
 
-The active version is **0.1.4**. Split sessions use Zen's normal sidebar
+The active version is **0.1.5**. Split sessions use Zen's normal sidebar
 behavior and do not participate in the prototype's tree.
 
 The repository was created after the first two prototypes were deployed.
@@ -17,6 +17,7 @@ recorded, not the original deployment times.
 | `tree-tabs-prototype/prototype/v0.1.2` | Expanded Glances become children of their originating ordinary tabs. |
 | `tree-tabs-prototype/prototype/v0.1.3` | Alt+Shift+Arrow shortcuts nest and outdent ordinary tab branches, preserving editor selection. |
 | `tree-tabs-prototype/prototype/v0.1.4` | Branch-preserving synchronous move API for Multi Tab Move; split sessions remain native. |
+| `tree-tabs-prototype/prototype/v0.1.5` | Independent trees inside native folders, preserving branches across folder, pin and Space moves. |
 
 The v0.2.0 automated tests and installation checks passed, but did not catch
 the subsequent user-visible problem. Its root cause has not been established.
@@ -124,3 +125,25 @@ native split layouts, preferences and other mod instances. A second profile was
 updated on disk while closed; it will activate on its next launch. No persistence
 schema, keyboard actor or split-as-tree-node behavior changed. Windows desktop
 input and physical mouse input remain unverified.
+
+## v0.1.5 validation
+
+Validated on November 17, 2026 with disposable macOS Zen 1.24.1b and Multi Tab
+Move 0.1.2. The folder suite passed 61 checks: native folder creation and nested
+folders, independent branch collapse, folder/section/Space moves, root outdent
+boundaries, trusted keyboard and pointer gestures, empty/collapsed folder drop
+targets, native nesting limits, rollback, Cmd-click children, expanded Glances,
+selection close/new-Space actions, and hot reload.
+
+Four additional sleeping-child checks confirm that native and selection-based
+folder/pin moves preserve the tree and focus without loading the child or
+requesting its page. A real graceful quit/restart preserved native folders,
+parent relationships, collapse flags, order, and the split layout returned by
+Zen's session-store API. The rendered sidebar showed folder trees and both
+native split panes.
+
+The existing 25 core, 17 branch, 21 promotion, 41 keyboard, 31 Auto Glance,
+148 Multi Tab Move and 114 split-close checks passed, along with 11 installer
+tests. The session-value format and keyboard actors are unchanged. Splits remain
+native groups, outside the tree. Pointer input was driven by WebDriver; physical
+macOS mouse input and Windows desktop behavior remain unverified.
