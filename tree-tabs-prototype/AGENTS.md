@@ -2,7 +2,7 @@
 
 ## Current status
 
-- Source baseline: **0.1.3**. Ordinary tabs support opener-based nesting,
+- Source baseline: **0.1.4**. Ordinary tabs support opener-based nesting,
   collapse/expand, menu-based nesting/outdenting, and session-persisted tree state.
 - Alt+Shift+Right nests the selected ordinary tab under its previous ordinary
   tab in the same Space; Alt+Shift+Left outdents one level. Descendants follow,
@@ -11,6 +11,10 @@
 - Moving a parent carries its entire branch in sidebar order and across Spaces.
   Nested branch moves detach the moved root; parent/child multi-selection retains
   the relationship. Closing a parent promotes its children.
+- `moveBranches(tabs, callback)` lets Multi Tab Move perform a synchronous
+  native move while keeping internal parent links and collapse state. Only
+  roots whose parent is outside the moving set detach. Splits remain excluded
+  from the tree; the caller moves their native wrappers separately.
 - Pinned tabs, Essentials, native groups, split views, Glance, private windows,
   and Little Zen windows are deliberately outside the current tree.
 - A Glance promoted with **Expand to new tab** becomes a child of its ordinary
@@ -22,9 +26,14 @@
   Do not restore that implementation as if it were a working feature.
 - Historical macOS validation and its limits are documented in
   [PROTOTYPES.md](PROTOTYPES.md). Windows browser behavior remains untested.
-- Current validation on disposable macOS Zen 1.24b: 41 keyboard checks, 25 core
+- Previous 0.1.3 validation on disposable macOS Zen 1.24b: 41 keyboard checks, 25 core
   checks, 17 branch-move checks, and 21 Glance-promotion checks passed, alongside
   the shared installer's nine checks.
+- Version 0.1.4 passed those browser suites again on Zen 1.24.1b, plus 99 Multi
+  Tab Move checks, 31 Auto Glance checks, 114 split-close checks and 11 installer
+  tests. Multi Tab Move's own pointer gestures and visible native split panes
+  were checked. See its [validation record](../multi-tab-move/VERIFICATION.md)
+  for the independent split-shortcut timeout and physical-input limitations.
 
 ## Implementation constraints
 
@@ -34,6 +43,10 @@
   move existing tabs with Zen's APIs rather than recreating or reloading them.
 - `followMovedBranches()` handles batched `TabMove` events and delayed workspace
   attribute changes. Preserve that ordering and multi-selection handling.
+- `moveBranches` must suppress intermediate move events, update the moved
+  nodes' Space baselines, then reconcile once. The callback must be synchronous;
+  a throwing callback must restore native placement before propagating its
+  error, so failed transactions preserve saved tree relationships.
 - Native opener information drives automatic nesting. New-tab commands,
   bookmarks, and external links are roots unless a real page opener exists.
 - The `fullyOpenGlance` wrapper must skip `{forSplit:true}`, preserve native

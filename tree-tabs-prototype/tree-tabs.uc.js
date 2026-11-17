@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name           Tree Tabs Prototype
-// @version        0.1.3
+// @version        0.1.4
 // @description    Parent and child tabs in Zen's existing sidebar.
 // @include        chrome://browser/content/browser.xhtml
 // ==/UserScript==
@@ -230,6 +230,38 @@
       button.setAttribute("aria-expanded", String(!node.collapsed));
       button.setAttribute("aria-label", `${node.collapsed ? "Expand" : "Collapse"} child tabs`);
       button.title = `${node.collapsed ? "Expand" : "Collapse"} ${descendants(node).length} child tabs`;
+    }
+  }
+
+  // A cooperating mod can move complete branches synchronously without
+  // intermediate native TabMove events detaching individual descendants.
+  function moveBranches(tabs, callback) {
+    if (typeof callback !== "function") throw new TypeError("A synchronous move is required.");
+    if (!enabled()) return callback();
+    followMovedBranches();
+    const members = new Set(tabs.map(tab => nodes.get(tab)).filter(node => node && eligible(node.tab)));
+    const roots = [...members].filter(node => !members.has(node.parent));
+    let completed = false;
+    moving++;
+    try {
+      const result = callback();
+      completed = result !== false;
+      return result;
+    } finally {
+      moving--;
+      for (const node of members) {
+        pendingMoves.delete(node);
+        node.space = workspace(node.tab);
+      }
+      if (completed) {
+        for (const root of roots) {
+          if (root.parent) root.parent.children = root.parent.children.filter(node => node !== root);
+          root.parent = null;
+          root.parentId = "";
+          save(root);
+        }
+      }
+      reconcile();
     }
   }
 
@@ -595,7 +627,7 @@
     }
     const style = document.createElementNS("http://www.w3.org/1999/xhtml", "link");
     style.rel = "stylesheet";
-    style.href = "chrome://sine/content/tree-tabs-prototype/tree-tabs.css?v=0.1.3";
+    style.href = "chrome://sine/content/tree-tabs-prototype/tree-tabs.css?v=0.1.4";
     document.documentElement.append(style);
     cleanups.push(() => style.remove());
 
@@ -669,9 +701,9 @@
   }
 
   const api = window.TreeTabs = {
-    version: "0.1.3", status: "starting", reconciliations: 0, lastReconcileMs: 0,
+    version: "0.1.4", status: "starting", reconciliations: 0, lastReconcileMs: 0,
     nest, outdent, toggleCollapse, expandAll, destroy,
-    canHandleShortcut, handleShortcut,
+    canHandleShortcut, handleShortcut, moveBranches,
     parentOf: tab => nodes.get(tab)?.parent?.tab || null,
     depthOf: tab => depth(nodes.get(tab)),
     snapshot: () => [...nodes.values()].filter(n => eligible(n.tab)).map(n => ({

@@ -1,0 +1,41 @@
+.tabbrowser-tab[uc-multi-tab-selected] > .tab-stack,
+.tabbrowser-tab[uc-multi-tab-carried] > .tab-stack,
+:is(tab-group, zen-folder, tab-split-view-wrapper)[uc-multi-tab-selected] > .tab-group-label-container {
+  border-radius: var(--tab-border-radius, 8px);
+  outline: 2px solid color-mix(in srgb, var(--zen-primary-color, AccentColor) 80%, currentColor);
+  outline-offset: -2px;
+  background-color: color-mix(in srgb, var(--zen-primary-color, AccentColor) 22%, transparent);
+}
+
+.tabbrowser-tab[uc-multi-tab-carried] > .tab-stack {
+  outline-style: dashed;
+  outline-width: 1px;
+  background-color: color-mix(in srgb, var(--zen-primary-color, AccentColor) 10%, transparent);
+}
+
+#uc-multi-tab-indicator {
+  position: fixed;
+  z-index: 2147483646;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--zen-primary-color, AccentColor);
+  box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 45%, transparent);
+  pointer-events: none;
+}
+
+#uc-multi-tab-ghost {
+  position: fixed;
+  left: -1000px;
+  top: -1000px;
+  padding: 10px 16px;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-radius: var(--tab-border-radius, 8px);
+  background: var(--zen-dialog-background, Canvas);
+  color: var(--toolbar-color, CanvasText);
+  font: 600 14px system-ui;
+  pointer-events: none;
+}
+
+:is(#uc-multi-tab-indicator, #uc-multi-tab-ghost)[hidden] {
+  display: none !important;
+}

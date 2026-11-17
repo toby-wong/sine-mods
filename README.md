@@ -9,7 +9,8 @@ through [Sine](https://github.com/CosmoCreeper/Sine).
 | --- | --- | --- |
 | [Little Zen](little-zen/) | 0.1.0 | Opens a compact temporary browsing window. **Open in Space** moves the live page into a normal window, preserving its state and container. |
 | [Auto Glance](auto-glance/) | 0.2.3 | Opens website-created tabs as Glance previews, keeps Mac Command-click as a normal background tab, and adds configurable Space-coloured backdrop opacity. |
-| [Tree Tabs Prototype](tree-tabs-prototype/) | 0.1.3 | Adds collapsible parent/child relationships to ordinary tabs. Alt+Shift+Right/Left nest and outdent whole branches; expanded Glances nest beneath their originating tree tab. |
+| [Tree Tabs Prototype](tree-tabs-prototype/) | 0.1.4 | Adds collapsible parent/child relationships to ordinary tabs. Alt+Shift+Right/Left nest and outdent whole branches; expanded Glances nest beneath their originating tree tab. |
+| [Multi Tab Move](multi-tab-move/) | 0.1.0 | Shift-click individual rows, then drag the selection or move it to a Space while retaining tree branches and native split sessions. |
 | [Alt-click Split View — local fork](alt-click-split-view/) | 1.4.7-local | Preserves live pages when splitting, adds third/fourth panes, and supports whole-group middle-click closure with stable pane focus. Stacks new split pairs in tall windows. Based on Kostiantyn Kugot's mod. |
 | [Keyword Tab Search](keyword-tab-search/) | 0.1.2 | Activates an existing search keyword with Tab, including `keyword` for a saved `@keyword` alias, and keeps searches in a pending split pane. |
 | [Find Bar Pane Fix](findbar-pane-fix/) | 0.1.4 | Keeps Cmd/Ctrl+F inside its pane, with configurable styling and optional scaling with page zoom. |
@@ -51,6 +52,11 @@ browser behavior has **not** been tested.
   routing have automated coverage; live browser checks have run on macOS.
   Choose a different modifier in the mod's settings if it conflicts with Glance.
   The optional Hammerspoon background-window click guard is Mac-only.
+- **Multi Tab Move:** **Shift + left-click** toggles individual rows on both
+  platforms. Drag a selected row to move the selection, or right-click it to
+  choose a destination Space. Parents carry their descendants and split
+  sessions stay together. Escape cancels a drag or clears the selection.
+  When Tree Tabs is installed, update it to **0.1.4 or later**.
 - **Keyword Tab Search:** type an existing search keyword, press **Tab**, type
   your query, and press **Enter**. The same plain Tab gesture works on both
   platforms. Unrecognized text and normal Tab navigation are preserved.
@@ -98,6 +104,7 @@ installation field:
 | Little Zen | `https://github.com/toby-wong/sine-mods/tree/main/little-zen` |
 | Auto Glance | `https://github.com/toby-wong/sine-mods/tree/main/auto-glance` |
 | Tree Tabs Prototype | `https://github.com/toby-wong/sine-mods/tree/main/tree-tabs-prototype` |
+| Multi Tab Move | `https://github.com/toby-wong/sine-mods/tree/main/multi-tab-move` |
 | Alt-click Split View — local fork | `https://github.com/toby-wong/sine-mods/tree/main/alt-click-split-view` |
 | Keyword Tab Search | `https://github.com/toby-wong/sine-mods/tree/main/keyword-tab-search` |
 | Find Bar Pane Fix | `https://github.com/toby-wong/sine-mods/tree/main/findbar-pane-fix` |
@@ -159,6 +166,8 @@ must be new for each real installation. The installer:
 - Preserves other mods, existing enable/disable choices, and browser preferences.
 - Disables automatic updates for these local copies.
 - Rolls back the selected files and registry if installation fails.
+- When installing Multi Tab Move, also updates an already-installed Tree Tabs
+  copy for its branch-preserving move API, retaining its enabled/disabled state.
 
 Restart Zen, check the mods are enabled in **Settings → Sine**, and configure
 them there. This installer does not install Sine, change the Zen application
@@ -217,6 +226,7 @@ validation requirements, and proposed future directions:
 - [Little Zen](little-zen/AGENTS.md)
 - [Auto Glance](auto-glance/AGENTS.md)
 - [Tree Tabs Prototype](tree-tabs-prototype/AGENTS.md)
+- [Multi Tab Move](multi-tab-move/AGENTS.md)
 - [Alt-click Split View](alt-click-split-view/AGENTS.md)
 - [Keyword Tab Search](keyword-tab-search/AGENTS.md)
 - [Find Bar Pane Fix](findbar-pane-fix/AGENTS.md)

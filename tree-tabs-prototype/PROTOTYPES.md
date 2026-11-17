@@ -1,6 +1,6 @@
 # Prototype history
 
-The active version is **0.1.3**. Split sessions use Zen's normal sidebar
+The active version is **0.1.4**. Split sessions use Zen's normal sidebar
 behavior and do not participate in the prototype's tree.
 
 The repository was created after the first two prototypes were deployed.
@@ -16,6 +16,7 @@ recorded, not the original deployment times.
 | `tree-tabs-prototype/prototype/v0.1.1` | Whole branches follow sidebar moves and moves between Spaces. |
 | `tree-tabs-prototype/prototype/v0.1.2` | Expanded Glances become children of their originating ordinary tabs. |
 | `tree-tabs-prototype/prototype/v0.1.3` | Alt+Shift+Arrow shortcuts nest and outdent ordinary tab branches, preserving editor selection. |
+| `tree-tabs-prototype/prototype/v0.1.4` | Branch-preserving synchronous move API for Multi Tab Move; split sessions remain native. |
 
 The v0.2.0 automated tests and installation checks passed, but did not catch
 the subsequent user-visible problem. Its root cause has not been established.
@@ -102,3 +103,24 @@ held keys, live settings changes, and repeated reload/unload are covered.
 The persistence format and native split/group exclusions are unchanged.
 Windows desktop input has not been validated. Reports and profile backups
 remain outside Git.
+
+## v0.1.4 validation
+
+The synchronous `moveBranches` API was exercised by Multi Tab Move's 99 checks
+on disposable macOS Zen 1.24.1b, including trusted WebDriver pointer dragging.
+It preserves selected branches through native moves and rollback, detaches only
+moved roots whose parents were not included, and retains collapsed descendants.
+Native three-/four-pane split sessions move as existing wrappers; they remain
+outside the tree. A browser screenshot confirmed visible split panes and rows.
+
+The 25 core, 17 branch-move, 21 Glance-promotion and 41 keyboard checks passed
+again, alongside 31 Auto Glance checks, 114 split-close checks and 11 installer
+tests. The existing split-extension shortcut suite timed out even with Multi Tab
+Move unloaded; it is not counted as a pass. See
+[the full validation record](../multi-tab-move/VERIFICATION.md).
+
+Live activation preserved the running profile's tabs, documents, tree state,
+native split layouts, preferences and other mod instances. A second profile was
+updated on disk while closed; it will activate on its next launch. No persistence
+schema, keyboard actor or split-as-tree-node behavior changed. Windows desktop
+input and physical mouse input remain unverified.

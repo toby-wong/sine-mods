@@ -96,6 +96,11 @@ unloaded tabs, and disabling/reloading the mod. A separate browser restart
 checks session restoration. The existing Auto Glance regression suite is also
 run with Tree Tabs enabled.
 
+The separate [Multi Tab Move](../multi-tab-move/) mod adds Shift-click selection
+and dragging of multiple branches and native split sessions. Tree Tabs 0.1.4
+provides its synchronous `moveBranches(tabs, callback)` integration; splits still
+do not become nodes in this tree.
+
 `tests/branch_moves.py` checks branch order, nested and collapsed branches,
 multi-tab moves, Space menu moves, late workspace attribute changes, page and
 selection preservation, and Zen's native drop handler and animation cleanup.

@@ -73,6 +73,26 @@ class InstallTests(unittest.TestCase):
         self.assertNotIn("origin", entry)
         self.assertFalse((self.mods / "little-zen").exists())
 
+    def test_multi_tab_move_updates_installed_tree_dependency_without_enabling_it(self):
+        self.initial["tree-tabs-prototype"] = {
+            "id": "tree-tabs-prototype", "version": "0.1.3", "enabled": False,
+        }
+        self.registry.write_text(json.dumps(self.initial))
+        tree = self.mods / "tree-tabs-prototype"
+        tree.mkdir()
+        (tree / "old.js").write_text("old tree")
+        result = self.run_install(["multi-tab-move"])
+        registry = json.loads(self.registry.read_text())
+        self.assertEqual(result["mods"], ["multi-tab-move", "tree-tabs-prototype"])
+        self.assertEqual(registry["tree-tabs-prototype"]["version"], "0.1.4")
+        self.assertFalse(registry["tree-tabs-prototype"]["enabled"])
+        self.assertEqual((self.backup / "mods/tree-tabs-prototype/old.js").read_text(), "old tree")
+
+    def test_multi_tab_move_does_not_install_unwanted_tree_mod(self):
+        result = self.run_install(["multi-tab-move"])
+        self.assertEqual(result["mods"], ["multi-tab-move"])
+        self.assertNotIn("tree-tabs-prototype", json.loads(self.registry.read_text()))
+
     def test_registry_write_failure_restores_existing_and_removes_new_mods(self):
         old = self.mods / "auto-glance"
         old.mkdir()

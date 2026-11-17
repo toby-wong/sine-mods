@@ -25,6 +25,7 @@ MOD_FILES = {
         "tree-tabs.uc.js", "tree-tabs.css",
         "TreeTabsShortcutChild.sys.mjs", "TreeTabsShortcutParent.sys.mjs",
     ),
+    "multi-tab-move": COMMON + ("multi-tab-move.uc.js", "multi-tab-move.css"),
     "alt-click-split-view": COMMON + (
         "alt-click-split-view.uc.js", "settings.uc.js",
         "AltClickSplitViewChild.sys.mjs", "LICENSE",
@@ -95,6 +96,9 @@ def install(profile, backup, selected, dry_run=False):
     metadata = json.loads(original)
     if not isinstance(metadata, dict):
         raise ValueError("The Sine registry must be a JSON object.")
+    if ("multi-tab-move" in selected and "tree-tabs-prototype" in metadata
+            and "tree-tabs-prototype" not in selected):
+        selected.append("tree-tabs-prototype")
     existed = {}
     for mod_id in selected:
         source = ROOT / mod_id

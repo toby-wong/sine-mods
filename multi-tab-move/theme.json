@@ -1,0 +1,23 @@
+{
+  "id": "multi-tab-move",
+  "name": "Multi Tab Move",
+  "description": "Shift-click individual tabs and move the selection with tree branches and split sessions intact.",
+  "version": "0.1.0",
+  "author": "Toby Wong",
+  "createdAt": "2026-11-17",
+  "updatedAt": "2026-11-17",
+  "homepage": "https://github.com/toby-wong/sine-mods/tree/main/multi-tab-move",
+  "fork": ["zen"],
+  "tags": ["tabs", "navigation"],
+  "ai": "yes",
+  "scripts": {
+    "multi-tab-move.uc.js": {
+      "include": ["chrome://browser/content/browser.xhtml"],
+      "loadOrder": 80
+    }
+  },
+  "style": {"chrome": "", "content": ""},
+  "preferences": "preferences.json",
+  "supportsUnload": true,
+  "readme": "https://raw.githubusercontent.com/toby-wong/sine-mods/main/multi-tab-move/README.md"
+}
